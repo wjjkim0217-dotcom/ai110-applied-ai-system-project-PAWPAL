@@ -1,6 +1,16 @@
-# PawPal+ (Module 2 Project)
+# PawPal+ with an AI planning assistant
 
-You are building **PawPal+**, a Streamlit app that helps a pet owner plan care tasks for their pet.
+PawPal+ is a Streamlit app that helps a busy pet owner plan their pets' care. It started as the
+Module 2 scheduler (priorities, fixed times, conflicts, recurring tasks). This version adds an
+**AI planning assistant**: describe your pets and your day in plain English, and an agent looks up
+pet-care guidelines, creates the tasks, runs the scheduler to check its own work, fixes what it
+finds, and hands you a draft to accept or discard.
+
+AI features (details in the AI planning assistant section below):
+
+- **Agentic workflow:** Claude plans, acts through tools that call the scheduler, and checks its work.
+- **Retrieval-augmented generation (RAG):** tasks are based on, and cite, sections of a pet-care knowledge base.
+- **Reliability and testing:** guardrails, logging, offline tests of the agent loop, and an eval harness.
 
 ## Scenario
 
@@ -26,11 +36,44 @@ Your final app should:
 
 ### Setup
 
-```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
+You need Python 3.10 or newer (developed on 3.13) and, for the AI assistant, an
+[Anthropic API key](https://console.anthropic.com/).
+
+1. Create a virtual environment and install the dependencies:
+
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+   On Windows, if `python` is not found, use `py` instead (`py -m venv .venv`).
+
+2. Add your API key. Copy `.env.example` to `.env` and replace the placeholder:
+
+   ```bash
+   cp .env.example .env   # Windows: copy .env.example .env
+   ```
+
+   `.env` is git-ignored. Without a key the app still runs; only the AI assistant is disabled.
+
+3. Run the app:
+
+   ```bash
+   streamlit run app.py
+   ```
+
+4. Run the tests (no API key or network needed; the agent tests use a fake Claude client):
+
+   ```bash
+   python -m pytest
+   ```
+
+5. Optional: run the reliability evals against the real model (uses API tokens):
+
+   ```bash
+   python -m evals.run_evals
+   ```
 
 ### Suggested workflow
 
@@ -41,6 +84,101 @@ pip install -r requirements.txt
 5. Add tests to verify key behaviors.
 6. Connect your logic to the Streamlit UI in `app.py`.
 7. Refine UML so it matches what you actually built.
+
+## 🤖 AI planning assistant
+
+### What it does
+
+In the **Plan with AI** section of the app, the owner types something like:
+
+> I have a 2-year-old husky named Mochi and an adult cat named Luna. I work 9 to 5.
+> Mochi takes a pill at 08:00 and 20:00.
+
+The assistant adds Mochi and Luna, creates walks, meals and the two medication doses with
+durations and priorities taken from the care guidelines, checks the schedule for clashes, and shows:
+
+- a short summary of what it did and why, citing guideline ids such as `[dogs.md#walks-and-exercise]`
+- the list of changes (new pets, new or changed tasks)
+- any remaining warnings, the proposed timeline, and the guideline sections it used
+- **Accept changes** and **Discard** buttons. Nothing is saved until the owner accepts.
+- an **Agent log** with every retrieval, tool call, self-check round and token count.
+
+### How it works
+
+![PawPal+ system architecture](assets/architecture.svg)
+
+Mermaid source: [diagrams/architecture.mmd](diagrams/architecture.mmd). The diagram reads top
+to bottom: **input** (the owner's request or the manual forms), **process** (guardrails,
+retriever, agent, validated tools, scheduler, self-check) and **output** (the draft for human
+review, then the saved schedule). Results are checked in three places: the automatic self-check
+inside the agent loop, the owner's Accept/Discard review, and the tester (pytest) and evaluator
+(`evals/run_evals.py`) shown in the Testing and monitoring box.
+
+1. **Retrieve** ([pawpal_rag.py](pawpal_rag.py)). The knowledge base is the markdown files in
+   [knowledge/](knowledge/), one chunk per `##` section, each with an id like `cats.md#feeding`.
+   Before calling the model, the agent works out which species the request is about (from
+   existing pets and words like "husky" or "kitten") and retrieves the top sections with BM25
+   keyword scoring. They are put in the prompt inside `<care_guidelines>`. The agent can also
+   search again with the `search_care_guidelines` tool.
+2. **Plan and act** ([pawpal_agent.py](pawpal_agent.py)). Claude (`claude-opus-5-5` by default)
+   gets tools that wrap the existing scheduler: `add_pet`, `add_task`, `update_task`,
+   `remove_task`, `set_availability`, `get_current_state`, `build_plan`, `find_free_slot`.
+   `add_task` requires a `sources` list, and every id must exist in the knowledge base, so the
+   retrieved guidelines decide durations, priorities and frequencies and are recorded in the
+   task notes. All changes go to a deep copy of the owner, never the real one.
+3. **Check its own work.** When Claude says it is done, the real `Scheduler.build_plan` runs on
+   the draft and `check_plan()` looks for conflicts and high-priority tasks that did not fit.
+   If there are any, they are sent back to Claude to fix (up to 2 rounds). Pets with no meal
+   and medication without a fixed time are reported as warnings.
+4. **Human review.** The app shows the draft and its diff; the owner accepts or discards it.
+   If the owner edits tasks while a draft is open, Accept is disabled so the draft cannot
+   overwrite newer changes.
+
+### Guardrails and logging
+
+| Guardrail | Where |
+|---|---|
+| Empty requests and requests over 2,000 characters are rejected before any API call | `PawPalAgent.run` |
+| At most 20 model calls, 40 tool calls, 25 new tasks and 10 pets per request | constants at the top of `pawpal_agent.py` |
+| Every tool input is validated (times, durations 1-240, enum values, pet names, guideline ids); bad input goes back to Claude as an error instead of crashing | `PlanningTools` |
+| The agent can only remove tasks it created in the same request, never the owner's | `tool_remove_task` |
+| Medication only as the owner describes it, no doses; signs of illness are referred to a vet | system prompt, checked by the evals |
+| API errors (bad key, rate limit, network, unknown model) become a readable message; the owner's data is untouched | `_call_model` |
+| Refusals are reported, and the request uses the API's server-side model fallback | `_call_model`, `run` |
+| Changes are only saved after the owner accepts them | `app.py` |
+
+Every run gets a short id, and each step (retrieval, model call, tool call, tool error, self-check,
+guardrail, error, totals) is written to `logs/pawpal_agent.log` (git-ignored, rotating) and shown in
+the app's Agent log.
+
+### Configuration
+
+Set in `.env` or the environment:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | (required for AI) | Your Anthropic API key |
+| `PAWPAL_MODEL` | `claude-opus-5-5` | Claude model the agent uses |
+| `PAWPAL_EFFORT` | `medium` | Reasoning effort (`low`, `medium`, `high`) |
+
+### Testing the AI features
+
+- `tests/test_agent.py` runs the full agent loop against a scripted fake client
+  ([tests/fake_claude.py](tests/fake_claude.py)): drafts never touch the original, retrieved
+  guidelines reach the prompt, the self-check sends conflicts back and stops after 2 rounds,
+  invalid tool input becomes an error result, owner tasks cannot be removed, call limits stop
+  runaway loops, API errors and refusals are handled, and every step is logged.
+- `tests/test_app_ui.py` drives the real Streamlit app headlessly with the fake client: the
+  assistant is disabled without a key, a draft is shown without touching saved data, Accept
+  saves it, Discard drops it, and an API error is shown instead of crashing the app.
+- `tests/test_rag.py` checks chunking, ranking for typical owner wording, species filtering
+  and determinism.
+- `evals/run_evals.py` runs the scenarios in [evals/scenarios.json](evals/scenarios.json) against
+  the real model and scores the final draft with deterministic checks: expected pets and tasks,
+  medication at the right times, no conflicts, high-priority tasks scheduled, guidelines cited,
+  owner tasks kept (including a prompt-injection request), no medication invented, and a vet
+  referral for a sick pet. `--runs 3` repeats each scenario and reports whether the runs produced
+  the same tasks. Results are saved to `evals/results/`.
 
 ## 🛠️ Implementation Summary
 
@@ -79,7 +217,7 @@ Run the full suite from the project root (with the virtual environment active):
 python -m pytest          # add -v to list every test
 ```
 
-The tests are in `tests/test_pawpal.py` and exercise `pawpal_system.py` directly, with no Streamlit involved. They cover:
+The scheduler tests are in `tests/test_pawpal.py` and exercise `pawpal_system.py` directly, with no Streamlit involved. The AI tests (`tests/test_agent.py`, `tests/test_rag.py`, `tests/test_evals.py`, `tests/test_app_ui.py`) are described in [Testing the AI features](#testing-the-ai-features) and need no API key. The scheduler tests cover:
 
 - **Sorting:** `sort_by_time` returns tasks in clock order with untimed tasks last. Built plans list entries chronologically, and flexible tasks are placed by priority.
 - **Recurring tasks:** Completing a daily task creates one due the next day, and a weekly task renews on its next weekday. Once tasks don't renew, completing twice doesn't create a duplicate, and `Scheduler.mark_complete` adds the new task to the right pet.
@@ -98,21 +236,25 @@ Output of a successful run of `python -m pytest`:
 
 ```
 ============================= test session starts =============================
-platform win32 -- Python 3.13.15, pytest-9.1.1, pluggy-1.7.0
-rootdir: C:\Users\wjkim\Documents\ai110-module2show-pawpal-starter
+platform win32 -- Python 3.13.15, pytest-9.2.0, pluggy-1.7.0
+rootdir: C:\Users\wjkim\Documents\ai110-applied-ai-system-project-PAWPAL
 configfile: pytest.ini
 testpaths: tests
-plugins: anyio-4.15.1
-collected 27 items
+plugins: anyio-4.16.0
+collected 62 items
 
-tests\test_pawpal.py ...........................                         [100%]
+tests\test_agent.py ................                                     [ 25%]
+tests\test_app_ui.py ....                                                [ 32%]
+tests\test_evals.py ...                                                  [ 37%]
+tests\test_pawpal.py ...........................                         [ 80%]
+tests\test_rag.py ............                                           [100%]
 
-============================= 27 passed in 0.06s ==============================
+============================= 62 passed in 9.54s ==============================
 ```
 
 **Confidence level: ★★★★☆ (4 / 5)**
 
-All 27 tests pass, including the three core behaviors (chronological sorting, daily and weekly recurrence, and duplicate-time conflict detection) and the main edge cases (empty pets, window boundaries, invalid input). I'm holding back one star because the tests only run `pawpal_system.py`, not the Streamlit UI. I haven't tested a task update that mixes a valid field with an unknown one.
+All 27 scheduler tests pass, including the three core behaviors (chronological sorting, daily and weekly recurrence, and duplicate-time conflict detection) and the main edge cases (empty pets, window boundaries, invalid input). I'm holding back one star because the tests only run `pawpal_system.py`, not the Streamlit UI. I haven't tested a task update that mixes a valid field with an unknown one.
 
 ## ✨ Features
 

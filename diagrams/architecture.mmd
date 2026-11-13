@@ -1,0 +1,57 @@
+%% PawPal+ system architecture
+%% Data flows top to bottom: INPUT (owner request) -> PROCESS (retriever, agent,
+%% scheduler, self-check) -> OUTPUT (draft the owner reviews, saved schedule).
+%% Dotted lines show where humans and tests check the AI's results.
+%% The agent always works on a copy of the owner's data; only "Accept" saves it.
+%% The class-level design of the scheduling core is in diagrams/uml.mmd.
+
+flowchart TB
+    subgraph IN["1 · Input"]
+        owner(["Pet owner"])
+        ask["Plan with AI box · app.py<br/>plain-English request"]
+        forms["Manual forms · app.py<br/>owner, pets, tasks"]
+    end
+
+    subgraph PROC["2 · Process"]
+        guard["Guardrails<br/>reject empty or too-long requests"]
+        kb[("Knowledge base<br/>knowledge/*.md")]
+        retriever["Retriever · pawpal_rag.py<br/>BM25, filtered by species"]
+        agent["Agent · pawpal_agent.py<br/>Claude plans steps, cites guideline ids"]
+        tools["Validated tools on a draft copy<br/>add_pet · add_task · update_task · build_plan"]
+        scheduler["Scheduler · pawpal_system.py<br/>build_plan"]
+        check["Self-check · check_plan()<br/>conflicts? high priority not scheduled?"]
+    end
+
+    subgraph OUT["3 · Output"]
+        review["Human review · app.py<br/>summary, changes, warnings, sources<br/>Accept or Discard"]
+        view["Saved schedule<br/>times, reasons, warnings"]
+    end
+
+    subgraph QA["Testing and monitoring"]
+        tester["Tester · pytest (offline)<br/>scheduler, agent with fake Claude,<br/>retriever, Streamlit UI"]
+        evaluator["Evaluator · evals/run_evals.py<br/>real model, scenario checks,<br/>pass rate and consistency"]
+        logs["Run log<br/>logs/pawpal_agent.log + Agent log in UI"]
+    end
+
+    %% Main AI flow
+    owner --> ask --> guard --> agent
+    kb --> retriever
+    retriever -- "guideline sections with ids" --> agent
+    agent --> tools --> scheduler --> check
+    tools -. "tool errors" .-> agent
+    check -. "problems found: fix them (max 2 rounds)" .-> agent
+    check -- "draft + plan" --> review
+    review -- "owner accepts" --> view
+    review -. "owner discards or asks again" .-> ask
+    view --> owner
+
+    %% Manual path (no AI)
+    owner --> forms --> scheduler
+
+    %% Where results are checked
+    tester -. "verifies" .-> agent
+    tester -. "verifies" .-> scheduler
+    tester -. "verifies" .-> retriever
+    evaluator -. "runs requests" .-> agent
+    evaluator -. "scores final draft" .-> check
+    agent -. "every step" .-> logs

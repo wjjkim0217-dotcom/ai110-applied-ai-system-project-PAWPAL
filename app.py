@@ -1,7 +1,12 @@
+import copy
 from datetime import date, time
 
 import streamlit as st
+from dotenv import load_dotenv
 
+load_dotenv()  # reads ANTHROPIC_API_KEY (and optional PAWPAL_MODEL) from .env
+
+from pawpal_agent import MAX_REQUEST_CHARS, PawPalAgent, diff_owners, has_credentials, setup_logging
 from pawpal_system import (
     Category,
     Frequency,
@@ -29,6 +34,13 @@ if "owner" not in st.session_state:
     )
 owner: Owner = st.session_state.owner
 scheduler = Scheduler()
+
+
+@st.cache_resource
+def get_agent() -> PawPalAgent:
+    """One agent (and one loaded knowledge base) shared across reruns."""
+    setup_logging()
+    return PawPalAgent()
 
 # ---------------------------------------------------------------- Owner
 with st.expander("👤 Owner & availability", expanded=not owner.pets):
@@ -177,6 +189,95 @@ if owner.pets:
 else:
     st.info("Add a pet before adding tasks.")
     plan_day = date.today()
+
+# ---------------------------------------------------------------- AI assistant
+st.divider()
+st.subheader("🤖 Plan with AI")
+st.caption(
+    "Describe your pets and your day in your own words. The assistant looks up pet-care "
+    "guidelines, adds tasks to a draft, checks the schedule for problems and fixes them, "
+    "then shows you every change. Nothing is saved until you accept it."
+)
+if not has_credentials():
+    st.info(
+        "To use the assistant, add your Anthropic API key to a `.env` file in the project folder "
+        "(`ANTHROPIC_API_KEY=...`, see `.env.example`) and restart the app.",
+        icon="🔑",
+    )
+
+ai_request = st.text_area(
+    "What do your pets need?",
+    placeholder=(
+        "I have a 2-year-old husky named Mochi and an older cat, Luna. I work 9 to 5. "
+        "Mochi takes a pill at 08:00 and 20:00."
+    ),
+    max_chars=MAX_REQUEST_CHARS,
+)
+if st.button("Ask PawPal AI", disabled=not has_credentials()):
+    with st.spinner("Looking up guidelines, planning and checking the schedule..."):
+        st.session_state.agent_base = copy.deepcopy(owner)  # to detect edits made after the run
+        st.session_state.agent_result = get_agent().run(owner, ai_request, plan_day)
+
+result = st.session_state.get("agent_result")
+if result is not None:
+    if result.status in ("error", "refused"):
+        st.error(result.summary, icon="⚠️")
+    elif result.status == "no_changes":
+        st.info(result.summary or "The assistant did not propose any changes.")
+    else:
+        with st.container(border=True):
+            st.markdown(f"**Proposed plan for {result.day:%A, %B %d}**")
+            st.write(result.summary)
+
+            st.markdown("**Changes**")
+            st.markdown("\n".join(f"- {c}" for c in result.changes))
+
+            for issue in result.issues:
+                (st.error if issue.severity == "error" else st.warning)(issue.message)
+
+            if result.plan.scheduled:
+                st.table(
+                    [
+                        {
+                            "Time": f"{e.start:%H:%M}–{e.end:%H:%M}",
+                            "Pet": e.pet.name,
+                            "Task": e.task.title,
+                            "Priority": e.task.priority.value,
+                            "Why": e.reason,
+                        }
+                        for e in result.plan.scheduled
+                    ]
+                )
+
+            if result.cited:
+                with st.expander(f"📚 Guidelines used ({len(result.cited)})"):
+                    agent = get_agent()
+                    for chunk_id in result.cited:
+                        chunk = agent.kb.get(chunk_id)
+                        if chunk:
+                            st.markdown(f"**{chunk.title}** `{chunk.id}`  \n{chunk.text}")
+
+            stale = diff_owners(st.session_state.agent_base, owner)
+            if stale:
+                st.warning("Your pets or tasks changed after this draft was made. Ask again to plan on the latest data.")
+            b1, b2 = st.columns(2)
+            if b1.button("✅ Accept changes", type="primary", disabled=bool(stale)):
+                st.session_state.owner = result.draft_owner
+                st.session_state.agent_result = None
+                st.session_state.show_plan = True
+                st.toast(f"Saved {len(result.changes)} change(s).")
+                st.rerun()
+            if b2.button("✖️ Discard"):
+                st.session_state.agent_result = None
+                st.rerun()
+
+    with st.expander("🔍 Agent log"):
+        st.caption(
+            f"Run {result.run_id} · {result.model_calls} model call(s) · {result.tool_calls} tool call(s) · "
+            f"{result.check_rounds} self-check fix round(s) · "
+            f"{result.input_tokens:,} input / {result.output_tokens:,} output tokens"
+        )
+        st.code("\n".join(f"{s.kind:<10} {s.detail}" for s in result.steps) or "(no steps)", language=None)
 
 # ---------------------------------------------------------------- Schedule
 st.divider()
