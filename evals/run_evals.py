@@ -30,7 +30,8 @@ from pawpal_system import Category, Owner, Pet, Priority, Species, Task
 
 EVAL_DIR = Path(__file__).parent
 SCENARIOS = EVAL_DIR / "scenarios.json"
-RESULTS_DIR = EVAL_DIR / "results"
+RESULTS_DIR = EVAL_DIR / "results"  # every run, git-ignored
+LATEST = EVAL_DIR / "latest_results.json"  # most recent run, committed
 
 
 @dataclass
@@ -138,7 +139,11 @@ def run_scenarios(agent: PawPalAgent, scenarios: list[dict[str, Any]], runs: int
                 "checks": [c.__dict__ for c in checks],
                 "check_rounds": result.check_rounds, "model_calls": result.model_calls,
                 "tool_calls": result.tool_calls, "input_tokens": result.input_tokens,
-                "output_tokens": result.output_tokens, "summary": result.summary,
+                "output_tokens": result.output_tokens,
+                # What went wrong inside the run and was handled (see logs/pawpal_agent.log).
+                "tool_errors": [s.detail for s in result.steps if s.kind == "tool_error"],
+                "guardrails": [s.detail for s in result.steps if s.kind == "guardrail"],
+                "summary": result.summary,
             })
             prints.append(fingerprint(result, original))
         report["scenarios"].append({
@@ -155,6 +160,8 @@ def run_scenarios(agent: PawPalAgent, scenarios: list[dict[str, Any]], runs: int
         "checks_total": sum(len(r["checks"]) for r in rows),
         "input_tokens": sum(r["input_tokens"] for r in rows),
         "output_tokens": sum(r["output_tokens"] for r in rows),
+        "tool_errors": sum(len(r["tool_errors"]) for r in rows),
+        "self_check_rounds": sum(r["check_rounds"] for r in rows),
     }
     return report
 
@@ -172,6 +179,7 @@ def print_report(report: dict[str, Any]) -> None:
     t = report["totals"]
     print("-" * 90)
     print(f"Runs passed: {t['passed']}/{t['runs']} | checks passed: {t['checks_passed']}/{t['checks_total']} | "
+          f"tool errors handled: {t['tool_errors']} | self-check fix rounds: {t['self_check_rounds']} | "
           f"tokens: {t['input_tokens']:,} in / {t['output_tokens']:,} out\n")
 
 
@@ -198,7 +206,9 @@ def main(argv: list[str] | None = None) -> int:
     RESULTS_DIR.mkdir(exist_ok=True)
     out = RESULTS_DIR / f"eval_{datetime.now():%Y%m%d_%H%M%S}.json"
     out.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    print(f"Full report: {out}")
+    # The latest report is also kept in the repository as a readable, parseable test log.
+    LATEST.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(f"Full report: {out} (also saved as {LATEST.relative_to(EVAL_DIR.parent)})")
     return 0 if report["totals"]["passed"] == report["totals"]["runs"] else 1
 
 

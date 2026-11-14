@@ -225,3 +225,14 @@ def test_daily_quota_fails_fast_with_the_reset_time():
     assert waits == []  # no point waiting out a daily quota
     assert "daily limit for 'gemini-x' is used up" in str(info.value)
     assert "resets in about 10h56m" in str(info.value)
+
+
+def test_rejected_gemini_key_gives_a_clear_message():
+    import httpx2
+
+    response = httpx2.Response(401, request=httpx2.Request("POST", "https://example.test"))
+    fake = FakeChat([openai.AuthenticationError("API key not valid", response=response, body=None)])
+
+    with pytest.raises(AgentError, match="Gemini API key was rejected. Check GEMINI_API_KEY"):
+        GeminiClient(openai_client=fake).create(model="m", system="s", tools=[], messages=[
+            {"role": "user", "content": "x"}])
