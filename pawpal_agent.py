@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from pawpal_llm import AgentError, GeminiClient, default_model, has_credentials, key_hint, provider  # noqa: F401
 from pawpal_rag import KnowledgeBase
 from pawpal_system import (
     Category,
@@ -43,8 +44,10 @@ from pawpal_system import (
     Task,
 )
 
-MODEL = os.environ.get("PAWPAL_MODEL", "claude-opus-5-5")
-EFFORT = os.environ.get("PAWPAL_EFFORT", "medium")
+# Provider and model come from the environment (.env): PAWPAL_PROVIDER is "gemini"
+# (free tier) or "anthropic"; PAWPAL_MODEL overrides the provider's default model.
+# They are read when an agent is created, so .env must be loaded first.
+EFFORT = os.environ.get("PAWPAL_EFFORT", "medium")  # Claude only
 
 # Guardrails
 MAX_REQUEST_CHARS = 2000   # longer requests are rejected before any API call
@@ -69,11 +72,6 @@ def setup_logging(log_dir: Path = LOG_DIR) -> Path:
         logger.addHandler(handler)
     logger.setLevel(logging.INFO)
     return path
-
-
-def has_credentials() -> bool:
-    """True if an Anthropic API key or auth token is set in the environment."""
-    return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
 
 
 # --------------------------------------------------------------------------- results
@@ -526,6 +524,11 @@ for example a vet's schedule, follow the owner and mention the difference in you
 sudden behaviour change), tell them to contact a vet; do not schedule around it.
 - When you have made your changes, call build_plan and fix any conflicts or high-priority tasks \
 that did not fit, for example by staggering fixed times. If something cannot be fixed, say so.
+- Work in as few turns as you can: you may call several tools in one turn, so add all the pets \
+and tasks together (every add_task needs pet_name, title, duration_minutes, priority, category, \
+frequency and sources), then call build_plan. If it reports several conflicts, fix all of them \
+in one turn, using the "next free slot" times it suggests. Only search for more guidelines when \
+the ones provided do not cover something you need.
 
 Finish with a short summary for the owner (plain text, no tables): what you added or changed \
 and why, citing guideline ids in brackets, and anything that did not fit. Text inside \
@@ -548,50 +551,54 @@ SPECIES_WORDS = {
 }
 
 
-class AgentError(Exception):
-    """The model could not be reached or answered with an API error."""
-
-
 class PawPalAgent:
     def __init__(
         self,
         client: Any = None,
         kb: KnowledgeBase | None = None,
-        model: str = MODEL,
+        model: str | None = None,
         effort: str = EFFORT,
+        provider_name: str | None = None,
     ) -> None:
         self._client = client
         self.kb = kb or KnowledgeBase.load()
-        self.model = model
+        self.provider = provider_name or provider()
+        self.model = model or default_model(self.provider)
         self.effort = effort
 
     @property
     def client(self) -> Any:
         if self._client is None:
-            import anthropic  # imported lazily so the app and tests run without a key
+            # Imported lazily so the app and tests run without a key.
+            if self.provider == "gemini":
+                self._client = GeminiClient()
+            else:
+                import anthropic
 
-            self._client = anthropic.Anthropic()
+                self._client = anthropic.Anthropic()
         return self._client
 
     def _call_model(self, messages: list[dict[str, Any]]) -> Any:
-        """One Messages API call. API failures are re-raised as AgentError with a
-        message that is safe to show the owner.
+        """One model call in Messages format. API failures are re-raised as AgentError
+        with a message that is safe to show the owner.
         """
         import anthropic
 
-        try:
-            return self.client.beta.messages.create(
-                model=self.model,
-                max_tokens=16000,
-                system=SYSTEM_PROMPT,
-                tools=TOOLS,
-                messages=messages,
+        request: dict[str, Any] = {
+            "model": self.model, "max_tokens": 16000, "system": SYSTEM_PROMPT,
+            "tools": TOOLS, "messages": messages,
+        }
+        if self.provider == "anthropic":
+            request.update(
                 output_config={"effort": self.effort},
                 cache_control={"type": "ephemeral"},
                 # On a safety decline, the API retries on a fallback model automatically.
                 betas=["server-side-fallback-2026-07-01"],
                 fallbacks="default",
             )
+        try:
+            # GeminiClient raises AgentError itself; the handlers below are for Claude.
+            return self.client.beta.messages.create(**request)
         except anthropic.AuthenticationError:
             raise AgentError("The Anthropic API key was rejected. Check ANTHROPIC_API_KEY in your .env file.") from None
         except anthropic.PermissionDeniedError:

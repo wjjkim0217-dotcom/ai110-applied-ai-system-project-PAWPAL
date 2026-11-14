@@ -16,7 +16,7 @@ flowchart TB
         guard["Guardrails<br/>reject empty or too-long requests"]
         kb[("Knowledge base<br/>knowledge/*.md")]
         retriever["Retriever · pawpal_rag.py<br/>BM25, filtered by species"]
-        agent["Agent · pawpal_agent.py<br/>Claude plans steps, cites guideline ids"]
+        agent["Agent · pawpal_agent.py<br/>model plans steps, cites guideline ids<br/>Gemini (free) or Claude via pawpal_llm.py"]
         tools["Validated tools on a draft copy<br/>add_pet · add_task · update_task · build_plan"]
         scheduler["Scheduler · pawpal_system.py<br/>build_plan"]
         check["Self-check · check_plan()<br/>conflicts? high priority not scheduled?"]
@@ -28,7 +28,7 @@ flowchart TB
     end
 
     subgraph QA["Testing and monitoring"]
-        tester["Tester · pytest (offline)<br/>scheduler, agent with fake Claude,<br/>retriever, Streamlit UI"]
+        tester["Tester · pytest (offline)<br/>scheduler, agent with fake models,<br/>retriever, Streamlit UI"]
         evaluator["Evaluator · evals/run_evals.py<br/>real model, scenario checks,<br/>pass rate and consistency"]
         logs["Run log<br/>logs/pawpal_agent.log + Agent log in UI"]
     end

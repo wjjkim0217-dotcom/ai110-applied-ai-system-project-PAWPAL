@@ -48,6 +48,31 @@ def test_harness_scores_a_good_run_as_passing_and_consistent():
     assert report["totals"]["checks_passed"] == report["totals"]["checks_total"]
 
 
+def test_sample_capture_renders_markdown_and_updates_readme(tmp_path):
+    from evals.sample_interactions import SAMPLES_END, SAMPLES_START, capture, write_readme
+
+    agent = PawPalAgent(client=FakeClient([
+        response(tool_use("add_task", {"pet_name": "Luna", "title": "Dinner", "duration_minutes": 10,
+                                       "priority": "high", "category": "feeding", "frequency": "daily",
+                                       "fixed_time": "18:10", "sources": ["scheduling.md#several-pets-one-owner"]})),
+        response(text("Added Luna's dinner at 18:10 so it does not clash with Mochi's.")),
+    ]))
+
+    markdown = capture(agent, ["fix_existing_clash"])
+
+    assert "> Please add Luna's dinner at 18:00 too." in markdown
+    assert "> Added Luna's dinner at 18:10" in markdown
+    assert "18:10-18:20  Luna" in markdown
+    assert "`scheduling.md#several-pets-one-owner`" in markdown
+
+    readme = tmp_path / "README.md"
+    readme.write_text(f"before\n{SAMPLES_START}\nold\n{SAMPLES_END}\nafter\n", encoding="utf-8")
+    write_readme(markdown, readme)
+    updated = readme.read_text(encoding="utf-8")
+    assert "old" not in updated and "Added Luna's dinner" in updated
+    assert updated.startswith("before\n") and updated.endswith(f"{SAMPLES_END}\nafter\n")
+
+
 def test_harness_catches_a_bad_run():
     original = build_owner({"pets": [{"name": "Rex", "species": "dog", "tasks": [
         {"title": "Walk", "minutes": 30, "priority": "high", "category": "walk"}]}]})

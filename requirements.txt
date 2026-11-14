@@ -1,4 +1,5 @@
 streamlit>=1.30
 pytest>=7.0
 anthropic>=2.5,<3
+openai>=3.50,<4
 python-dotenv>=1.0

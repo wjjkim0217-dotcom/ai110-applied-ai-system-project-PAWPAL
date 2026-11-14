@@ -4,9 +4,9 @@ from datetime import date, time
 import streamlit as st
 from dotenv import load_dotenv
 
-load_dotenv()  # reads ANTHROPIC_API_KEY (and optional PAWPAL_MODEL) from .env
+load_dotenv()  # reads PAWPAL_PROVIDER, the API key and optional PAWPAL_MODEL from .env
 
-from pawpal_agent import MAX_REQUEST_CHARS, PawPalAgent, diff_owners, has_credentials, setup_logging
+from pawpal_agent import MAX_REQUEST_CHARS, PawPalAgent, diff_owners, has_credentials, key_hint, setup_logging
 from pawpal_system import (
     Category,
     Frequency,
@@ -200,8 +200,9 @@ st.caption(
 )
 if not has_credentials():
     st.info(
-        "To use the assistant, add your Anthropic API key to a `.env` file in the project folder "
-        "(`ANTHROPIC_API_KEY=...`, see `.env.example`) and restart the app.",
+        f"To use the assistant, add an API key to the `.env` file in the project folder "
+        f"(`{key_hint()}=...`, see `.env.example`) and restart the app. A free Google Gemini key "
+        "works: https://aistudio.google.com/apikey",
         icon="🔑",
     )
 

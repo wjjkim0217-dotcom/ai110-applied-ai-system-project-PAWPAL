@@ -240,7 +240,8 @@ def test_api_request_uses_the_configured_model_and_tools():
     _, client = run([response(text("ok"))])
 
     call = client.calls[0]
-    assert call["model"] == pawpal_agent.MODEL
+    assert call["model"] == "claude-opus-5-5"  # no provider configured in tests -> Claude defaults
+    assert call["fallbacks"] == "default"
     assert {t["name"] for t in call["tools"]} >= {"add_task", "build_plan", "search_care_guidelines"}
     assert call["system"] == pawpal_agent.SYSTEM_PROMPT
 

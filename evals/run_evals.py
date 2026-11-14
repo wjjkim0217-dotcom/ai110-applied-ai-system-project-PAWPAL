@@ -25,7 +25,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from pawpal_agent import AgentResult, PawPalAgent, has_credentials, parse_hhmm, setup_logging
+from pawpal_agent import key_hint, AgentResult, PawPalAgent, has_credentials, parse_hhmm, setup_logging
 from pawpal_system import Category, Owner, Pet, Priority, Species, Task
 
 EVAL_DIR = Path(__file__).parent
@@ -122,7 +122,8 @@ def fingerprint(result: AgentResult, original: Owner) -> tuple:
 
 
 def run_scenarios(agent: PawPalAgent, scenarios: list[dict[str, Any]], runs: int = 1) -> dict[str, Any]:
-    report: dict[str, Any] = {"model": agent.model, "effort": agent.effort, "runs_per_scenario": runs,
+    report: dict[str, Any] = {"provider": agent.provider, "model": agent.model,
+                              "effort": agent.effort if agent.provider == "anthropic" else None, "runs_per_scenario": runs,
                               "started": datetime.now().isoformat(timespec="seconds"), "scenarios": []}
     for sc in scenarios:
         day = date.fromisoformat(sc["day"])
@@ -159,7 +160,8 @@ def run_scenarios(agent: PawPalAgent, scenarios: list[dict[str, Any]], runs: int
 
 
 def print_report(report: dict[str, Any]) -> None:
-    print(f"\nPawPal+ agent eval · model {report['model']} · effort {report['effort']} · "
+    effort = f" | effort {report['effort']}" if report["effort"] else ""
+    print(f"\nPawPal+ agent eval | {report['provider']} model {report['model']}{effort} | "
           f"{report['runs_per_scenario']} run(s) per scenario\n")
     print(f"{'scenario':<28} {'pass rate':>9}  {'consistent':>10}  failed checks")
     print("-" * 90)
@@ -169,7 +171,7 @@ def print_report(report: dict[str, Any]) -> None:
               f"{'; '.join(failed) or '-'}")
     t = report["totals"]
     print("-" * 90)
-    print(f"Runs passed: {t['passed']}/{t['runs']} · checks passed: {t['checks_passed']}/{t['checks_total']} · "
+    print(f"Runs passed: {t['passed']}/{t['runs']} | checks passed: {t['checks_passed']}/{t['checks_total']} | "
           f"tokens: {t['input_tokens']:,} in / {t['output_tokens']:,} out\n")
 
 
@@ -181,7 +183,7 @@ def main(argv: list[str] | None = None) -> int:
 
     load_dotenv()
     if not has_credentials():
-        print("ANTHROPIC_API_KEY is not set. Add it to .env (see .env.example).", file=sys.stderr)
+        print(f"{key_hint()} is not set. Add it to .env (see .env.example).", file=sys.stderr)
         return 2
     scenarios = load_scenarios()
     if args.only:

@@ -31,18 +31,18 @@ def fresh_cache():
 
 
 def test_without_a_key_the_assistant_is_disabled(monkeypatch):
-    monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **k: False)
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.setenv("PAWPAL_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "paste-your-gemini-key-here")  # the .env placeholder
 
     at = AppTest.from_file(str(APP), default_timeout=30).run()
 
     assert button(at, "Ask PawPal AI").disabled
-    assert any("ANTHROPIC_API_KEY" in i.value for i in at.info)
+    assert any("GEMINI_API_KEY" in i.value for i in at.info)
 
 
 def test_draft_is_reviewed_then_accepted(monkeypatch):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setenv("PAWPAL_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     monkeypatch.setattr(pawpal_agent, "PawPalAgent", scripted_agent([
         response(
             tool_use("add_pet", {"name": "Rex", "species": "dog"}),
@@ -72,7 +72,8 @@ def test_draft_is_reviewed_then_accepted(monkeypatch):
 
 
 def test_discard_keeps_the_original(monkeypatch):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setenv("PAWPAL_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     monkeypatch.setattr(pawpal_agent, "PawPalAgent", scripted_agent([
         response(tool_use("add_pet", {"name": "Luna", "species": "cat"})),
         response(text("Added Luna.")),
@@ -92,7 +93,8 @@ def test_discard_keeps_the_original(monkeypatch):
 def test_api_error_is_shown_not_raised(monkeypatch):
     import anthropic
 
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setenv("PAWPAL_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     monkeypatch.setattr(pawpal_agent, "PawPalAgent", scripted_agent([anthropic.AnthropicError("boom")]))
 
     at = AppTest.from_file(str(APP), default_timeout=30).run()
