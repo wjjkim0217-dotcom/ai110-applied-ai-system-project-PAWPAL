@@ -371,6 +371,9 @@ to verify. It also reinforced a lesson from Module 2: AI tools (including the on
 build this) tend to do more than asked, so clear specs, small steps and tests are what keep the
 result on track.
 
+The responsible-AI reflection (limitations and biases, misuse and how it is prevented, testing
+surprises, and how I worked with AI) is in [model_card.md](model_card.md).
+
 ## Project structure
 
 ```
@@ -385,6 +388,7 @@ tests/                  Offline tests, including fake model clients
 diagrams/               architecture.mmd (system) and uml.mmd (scheduler classes)
 assets/                 Rendered architecture diagram
 docs/scheduler.md       Original Module 2 scheduler documentation
+model_card.md           Limitations, misuse, testing surprises, AI collaboration
 ```
 
 The pet-care guidance in `knowledge/` is general information for planning, not veterinary advice.
