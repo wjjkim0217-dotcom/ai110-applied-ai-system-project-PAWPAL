@@ -93,34 +93,34 @@ the app itself, not only in the docs.
 
 ## Collaboration with AI
 
-<!-- Rewrite this section in your own words. The facts below are what happened in this project. -->
+I used an AI coding assistant (Claude Code) for almost every step of this project: choosing which
+project to extend, designing the architecture, writing the agent, retriever, tests and evals,
+running the real model, and writing the docs. What worked best was the same thing I noticed in
+Module 2: giving it the assignment's instructions directly and asking for one step at a time.
+When my instructions were clear, its output was clear too.
 
-I built this project with an AI coding assistant (Claude Code). It compared my three earlier
-projects and recommended extending PawPal+. It then designed the architecture, wrote the agent,
-retriever, tests, eval harness and documentation, and ran the real evaluations. My role was to set
-the direction, review its output, make the decisions, and verify the results by running the tests,
-reading the eval output and checking what was committed.
+**A suggestion I accepted.** The AI compared my three earlier projects and recommended extending
+PawPal+, with the existing scheduler checking every plan the AI makes. I went with it mainly
+because PawPal+ already had a working scheduler with 27 passing tests. Building the AI part on
+code I had already tested felt safer than starting on something new.
 
-**A suggestion I accepted: extend PawPal+ with an agent whose work is checked by the existing
-scheduler.** The assistant argued that PawPal+ fit the assignment best: the scheduler already
-detected conflicts and unscheduled tasks, so it could act as a deterministic check on the AI's
-plan instead of trusting the model's judgment. I accepted it because it builds on code I had
-already tested, and because "the AI proposes, code verifies, the owner approves" is easy to
-explain and to test.
+**A suggestion I did not accept as written.** The first version of the assistant only ran on the
+paid Claude API. I didn't have a budget for API usage on a class project, so I asked for a free
+option instead. The AI listed a few, I picked Google Gemini, and it changed the model layer so
+Gemini is the default and Claude is optional. That choice had side effects: the free tier only
+allows a small number of requests per day, so the default model became `gemini-3.5-flash-lite`
+and the agent was changed to use fewer requests per plan.
 
-**A suggestion I did not accept as written: running the assistant on Claude.** The first version
-used the paid Claude API (`claude-opus-5-5`) as its only model. That was a poor fit for me: I
-needed something free to build, test and demo the project. I asked for a free option, chose Google
-Gemini from the alternatives it listed, and had the model layer changed so Gemini is the default
-and Claude is optional. The trade-off was real: the free model is smaller and rate-limited, which
-is why the default ended up as `gemini-3.5-flash-lite` and why the agent now batches its tool calls.
+I also scoped down a couple of other things. I kept the work on `main` instead of the new branch
+it suggested. And when it started a bigger round of README and eval changes, I had it set those
+aside so I could commit the earlier work first.
 
-Other places where I changed or scoped down what the AI did:
-- It proposed working on a new branch; I kept the work on `main`.
-- When it started a larger round of README and eval changes, I had it set those aside so I could
-  commit the earlier work on its own first, then brought them back later.
+**How I checked its work.** My main check was running the test suite and making sure everything
+passed before committing. The tests didn't catch everything, though. The AI's secret scan missed
+my API key (GitHub's push protection caught it), it miscounted the checks in one README table, and
+its first choice of model had already been retired. Those only showed up later, when things were
+run for real.
 
-**What I learned about working with AI.** The assistant was fast and thorough, but it also made
-mistakes that I or the system had to catch: a pre-commit secret scan that missed my key's format,
-a miscounted eval table, and a default model that had been retired. Clear requests, small steps,
-and checking real results instead of trusting summaries were what kept the project on track.
+**What I learned.** Clear instructions win. The more directly I gave the AI the assignment's
+wording, and the smaller each step was, the better the result. But even with good instructions it
+still made mistakes, so I can't treat "the tests pass" as the end of checking.
