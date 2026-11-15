@@ -1,0 +1,24 @@
+$ python -m pytest -v -k "empty_and_overlong or rejected_gemini_key or rate_limit or daily_quota or invalid_tool_input or cannot_remove or call_limit or refusal or api_failure or api_error_is_shown"
+============================= test session starts =============================
+platform win32 -- Python 3.13.15, pytest-9.2.0, pluggy-1.7.0 -- C:\Users\wjkim\Documents\ai110-applied-ai-system-project-PAWPAL\.venv\Scripts\python.exe
+rootdir: C:\Users\wjkim\Documents\ai110-applied-ai-system-project-PAWPAL
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.16.0
+collecting ... collected 82 items / 69 deselected / 13 selected
+
+tests/test_agent.py::test_invalid_tool_input_is_returned_to_the_agent_as_an_error PASSED [  7%]
+tests/test_agent.py::test_agent_cannot_remove_tasks_the_owner_created PASSED [ 15%]
+tests/test_agent.py::test_model_call_limit_stops_a_runaway_loop PASSED   [ 23%]
+tests/test_agent.py::test_tool_call_limit_refuses_extra_calls PASSED     [ 30%]
+tests/test_agent.py::test_empty_and_overlong_requests_never_call_the_api PASSED [ 38%]
+tests/test_agent.py::test_api_failure_returns_a_safe_error_and_no_draft PASSED [ 46%]
+tests/test_agent.py::test_refusal_is_reported_without_a_draft PASSED     [ 53%]
+tests/test_app_ui.py::test_api_error_is_shown_not_raised PASSED          [ 61%]
+tests/test_llm.py::test_finish_reasons_map_to_stop_reasons[content_filter-refusal] PASSED [ 69%]
+tests/test_llm.py::test_rate_limit_is_waited_out_then_retried PASSED     [ 76%]
+tests/test_llm.py::test_rate_limit_that_never_clears_becomes_a_readable_error PASSED [ 84%]
+tests/test_llm.py::test_daily_quota_fails_fast_with_the_reset_time PASSED [ 92%]
+tests/test_llm.py::test_rejected_gemini_key_gives_a_clear_message PASSED [100%]
+
+====================== 13 passed, 69 deselected in 8.69s ======================

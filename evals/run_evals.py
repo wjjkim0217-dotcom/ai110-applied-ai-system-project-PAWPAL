@@ -187,7 +187,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--runs", type=int, default=1, help="runs per scenario (consistency check)")
     parser.add_argument("--only", nargs="*", help="scenario names to run")
+    parser.add_argument("--show-latest", action="store_true",
+                        help="print the saved evals/latest_results.json (no API key or calls needed)")
     args = parser.parse_args(argv)
+
+    if args.show_latest:
+        report = json.loads(LATEST.read_text(encoding="utf-8"))
+        print_report(report)
+        print(f"From {LATEST.relative_to(EVAL_DIR.parent)} (run started {report['started']})")
+        return 0 if report["totals"]["passed"] == report["totals"]["runs"] else 1
 
     load_dotenv()
     if not has_credentials():

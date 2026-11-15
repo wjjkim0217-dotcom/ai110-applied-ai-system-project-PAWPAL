@@ -98,3 +98,25 @@ def test_harness_catches_a_bad_run():
     assert checks == {"keeps owner tasks": False, "no meds added": False,
                       "summary mentions one of ['veterinarian']": False}
     assert rex.tasks  # the original was never touched
+
+
+def test_demo_trace_shows_retrieval_tools_output_and_checks():
+    from evals.demo_run import EMPTY_CASE, trace
+
+    scenario = next(s for s in load_scenarios() if s["name"] == "fix_existing_clash")
+    agent = PawPalAgent(client=FakeClient([
+        response(tool_use("add_task", {"pet_name": "Luna", "title": "Dinner", "duration_minutes": 10,
+                                       "priority": "high", "category": "feeding", "frequency": "daily",
+                                       "fixed_time": "18:10", "sources": ["cats.md#feeding"]})),
+        response(text("Added Luna's dinner at 18:10.")),
+    ]))
+
+    text_out, passed = trace(agent, scenario, "demo", 1, 1)
+
+    assert passed
+    for expected in ["retrieve", "tool       add_task", "check", "Output (status: proposed)",
+                     "18:10-18:20  Luna", "PASS  no conflicts", "Result: PASS"]:
+        assert expected in text_out, expected
+
+    empty_out, empty_passed = trace(PawPalAgent(client=FakeClient([])), EMPTY_CASE, "guardrail", 1, 1)
+    assert empty_passed and "guardrail" in empty_out and "0 model calls" in empty_out
