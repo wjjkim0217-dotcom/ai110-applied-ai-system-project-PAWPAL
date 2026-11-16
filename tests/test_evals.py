@@ -48,6 +48,27 @@ def test_harness_scores_a_good_run_as_passing_and_consistent():
     assert report["totals"]["checks_passed"] == report["totals"]["checks_total"]
 
 
+def test_single_run_report_shows_consistency_as_not_measured(capsys):
+    from evals.run_evals import print_report
+
+    def scenario(runs):
+        return {"name": f"s{runs}", "pass_rate": 1.0, "consistent": True,
+                "runs": [{"passed": True, "checks": []}] * runs}
+
+    totals = {"runs": 1, "passed": 1, "checks_passed": 0, "checks_total": 0, "tool_errors": 0,
+              "self_check_rounds": 0, "input_tokens": 0, "output_tokens": 0}
+    base = {"provider": "fake", "model": "m", "effort": None, "totals": totals}
+
+    print_report({**base, "runs_per_scenario": 1, "scenarios": [scenario(1)]})
+    out = capsys.readouterr().out
+    assert "n/a" in out and "--runs 2" in out
+    assert " yes " not in out
+
+    print_report({**base, "runs_per_scenario": 2, "scenarios": [scenario(2)]})
+    out = capsys.readouterr().out
+    assert "yes" in out and "n/a" not in out
+
+
 def test_sample_capture_renders_markdown_and_updates_readme(tmp_path):
     from evals.sample_interactions import SAMPLES_END, SAMPLES_START, capture, write_readme
 

@@ -1,8 +1,8 @@
 # AI Interactions Log
 
-This file covers the two stretch features that depend on AI interactions: the PawPal+
-agent's saved reasoning traces (Agentic Workflow) and a comparison of two system prompts on
-the same task (Prompt Comparison).
+This file covers the PawPal+ agent's saved reasoning traces (Agentic Workflow Enhancement),
+how I used a coding agent to build the project (Reflection on AI Collaboration), and a
+comparison of two system prompts on the same task (Fine-Tuning or Specialization Behavior).
 
 ---
 
@@ -86,7 +86,7 @@ system prompt requires.
 
 ---
 
-## Agent Workflow (SF7): using a coding agent to build PawPal+ AI
+## Using a coding agent to build PawPal+ AI
 
 **What task did you give the agent?**
 
@@ -118,7 +118,7 @@ docs.
 
 ---
 
-## Prompt Comparison (SF11): original vs. revised system prompt
+## Prompt comparison: original vs. revised system prompt
 
 Same request (the husky and cat workday above), same model, same knowledge base. The only
 difference is one paragraph added to `SYSTEM_PROMPT` in [pawpal_agent.py](pawpal_agent.py),

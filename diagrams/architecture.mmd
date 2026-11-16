@@ -17,7 +17,7 @@ flowchart TB
         kb[("Knowledge base<br/>knowledge/*.md")]
         retriever["Retriever · pawpal_rag.py<br/>BM25, filtered by species"]
         agent["Agent · pawpal_agent.py<br/>model plans steps, cites guideline ids<br/>Gemini (free) or Claude via pawpal_llm.py"]
-        tools["Validated tools on a draft copy<br/>add_pet · add_task · update_task · build_plan"]
+        tools["Validated tools on a draft copy<br/>add_pet · add_task · update_task · build_plan<br/>search_care_guidelines"]
         scheduler["Scheduler · pawpal_system.py<br/>build_plan"]
         check["Self-check · check_plan()<br/>conflicts? high priority not scheduled?"]
     end
@@ -37,16 +37,19 @@ flowchart TB
     owner --> ask --> guard --> agent
     kb --> retriever
     retriever -- "guideline sections with ids" --> agent
-    agent --> tools --> scheduler --> check
+    agent --> tools --> scheduler
+    scheduler -- "AI draft" --> check
     tools -. "tool errors" .-> agent
+    tools -. "search_care_guidelines (mid-run)" .-> retriever
     check -. "problems found: fix them (max 2 rounds)" .-> agent
     check -- "draft + plan" --> review
     review -- "owner accepts" --> view
     review -. "owner discards or asks again" .-> ask
     view --> owner
 
-    %% Manual path (no AI)
+    %% Manual path (no AI, no self-check): the plan is shown directly
     owner --> forms --> scheduler
+    scheduler -- "manual path: no AI, no self-check" --> view
 
     %% Where results are checked
     tester -. "verifies" .-> agent

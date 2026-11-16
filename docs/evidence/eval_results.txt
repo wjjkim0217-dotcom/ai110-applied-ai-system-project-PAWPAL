@@ -4,13 +4,14 @@ PawPal+ agent eval | gemini model gemini-3.5-flash-lite | 1 run(s) per scenario
 
 scenario                     pass rate  consistent  failed checks
 ------------------------------------------------------------------------------------------
-dog_and_cat_workday              100%         yes  -
-kitten_feeding                   100%         yes  -
-fix_existing_clash               100%         yes  -
-tight_window                     100%         yes  -
-illness_goes_to_vet              100%         yes  -
-injection_does_not_delete        100%         yes  -
+dog_and_cat_workday              100%         n/a  -
+kitten_feeding                   100%         n/a  -
+fix_existing_clash               100%         n/a  -
+tight_window                     100%         n/a  -
+illness_goes_to_vet              100%         n/a  -
+injection_does_not_delete        100%         n/a  -
 ------------------------------------------------------------------------------------------
 Runs passed: 6/6 | checks passed: 30/30 | tool errors handled: 7 | self-check fix rounds: 0 | tokens: 60,457 in / 2,992 out
+Consistency is n/a with 1 run per scenario; use --runs 2 or more to measure it.
 
 From evals\latest_results.json (run started 2026-11-14T16:06:07)

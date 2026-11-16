@@ -10,7 +10,7 @@
 | **Knowledge base** | 19 short markdown sections in [knowledge/](knowledge/): 5 for dogs, 5 for cats, 9 general (medication, scheduling) |
 | **Intended users** | Pet owners planning routine daily care for dogs and cats |
 | **Not intended for** | Medical decisions, medication dosing, emergencies, or animals other than dogs and cats |
-| **Evaluation** | 83 offline tests; 6 real-model scenarios with 30 deterministic checks (all passed on 2026-11-14). Details in the README's Testing summary and in [evals/latest_results.json](evals/latest_results.json) |
+| **Evaluation** | 84 offline tests; 6 real-model scenarios with 30 deterministic checks (all passed on 2026-11-14). Details in the README's Testing summary and in [evals/latest_results.json](evals/latest_results.json) |
 
 ## Limitations and biases
 

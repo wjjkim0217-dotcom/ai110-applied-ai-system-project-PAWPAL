@@ -6,7 +6,7 @@ rootdir: C:\Users\wjkim\Documents\ai110-applied-ai-system-project-PAWPAL
 configfile: pytest.ini
 testpaths: tests
 plugins: anyio-4.16.0
-collecting ... collected 83 items / 70 deselected / 13 selected
+collecting ... collected 84 items / 71 deselected / 13 selected
 
 tests/test_agent.py::test_invalid_tool_input_is_returned_to_the_agent_as_an_error PASSED [  7%]
 tests/test_agent.py::test_agent_cannot_remove_tasks_the_owner_created PASSED [ 15%]
@@ -22,4 +22,4 @@ tests/test_llm.py::test_rate_limit_that_never_clears_becomes_a_readable_error PA
 tests/test_llm.py::test_daily_quota_fails_fast_with_the_reset_time PASSED [ 92%]
 tests/test_llm.py::test_rejected_gemini_key_gives_a_clear_message PASSED [100%]
 
-====================== 13 passed, 70 deselected in 8.18s ======================
+====================== 13 passed, 71 deselected in 8.34s ======================

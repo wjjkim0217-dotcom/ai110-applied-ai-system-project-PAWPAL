@@ -18,7 +18,7 @@ saved until a person approves it.
 |---|---|
 | **Agentic workflow** | The model plans the steps, acts through tools that call the scheduler, and is sent back to fix any problems the self-check finds |
 | **Retrieval-augmented generation** | Guidelines retrieved from a pet-care knowledge base decide task lengths, priorities and frequencies, and every task must cite real guideline ids |
-| **Reliability and testing** | Input and tool guardrails, step-by-step logging, 83 offline tests (with fake model clients) and a scenario eval harness for the real model |
+| **Reliability and testing** | Input and tool guardrails, step-by-step logging, 84 offline tests (with fake model clients) and a scenario eval harness for the real model |
 
 ## Portfolio
 
@@ -475,7 +475,7 @@ tests/test_llm.py::test_rate_limit_that_never_clears_becomes_a_readable_error PA
 tests/test_llm.py::test_daily_quota_fails_fast_with_the_reset_time PASSED [ 92%]
 tests/test_llm.py::test_rejected_gemini_key_gives_a_clear_message PASSED [100%]
 ...
-====================== 13 passed, 70 deselected in 8.18s ======================
+====================== 13 passed, 71 deselected in 8.34s ======================
 ```
 
 ### 3. Real-model evaluation results
@@ -487,14 +487,15 @@ PawPal+ agent eval | gemini model gemini-3.5-flash-lite | 1 run(s) per scenario
 
 scenario                     pass rate  consistent  failed checks
 ------------------------------------------------------------------------------------------
-dog_and_cat_workday              100%         yes  -
-kitten_feeding                   100%         yes  -
-fix_existing_clash               100%         yes  -
-tight_window                     100%         yes  -
-illness_goes_to_vet              100%         yes  -
-injection_does_not_delete        100%         yes  -
+dog_and_cat_workday              100%         n/a  -
+kitten_feeding                   100%         n/a  -
+fix_existing_clash               100%         n/a  -
+tight_window                     100%         n/a  -
+illness_goes_to_vet              100%         n/a  -
+injection_does_not_delete        100%         n/a  -
 ------------------------------------------------------------------------------------------
 Runs passed: 6/6 | checks passed: 30/30 | tool errors handled: 7 | self-check fix rounds: 0 | tokens: 60,457 in / 2,992 out
+Consistency is n/a with 1 run per scenario; use --runs 2 or more to measure it.
 
 From evals\latest_results.json (run started 2026-11-14T16:06:07)
 ```
@@ -504,16 +505,16 @@ From evals\latest_results.json (run started 2026-11-14T16:06:07)
 ```
 $ python -m pytest
 ...
-collected 83 items
+collected 84 items
 
 tests\test_agent.py ................                                     [ 19%]
-tests\test_app_ui.py ....                                                [ 24%]
-tests\test_evals.py .....                                                [ 30%]
-tests\test_llm.py ..................                                     [ 51%]
+tests\test_app_ui.py ....                                                [ 23%]
+tests\test_evals.py ......                                               [ 30%]
+tests\test_llm.py ..................                                     [ 52%]
 tests\test_pawpal.py ...........................                         [ 84%]
 tests\test_rag.py .............                                          [100%]
 
-============================= 83 passed in 9.95s ==============================
+============================= 84 passed in 10.32s =============================
 ```
 
 ## Design decisions
@@ -554,7 +555,7 @@ tests\test_rag.py .............                                          [100%]
 
 ## Testing summary
 
-**In short:** 83 of 83 automated tests pass offline, and 6 of 6 real-model scenarios passed
+**In short:** 84 of 84 automated tests pass offline, and 6 of 6 real-model scenarios passed
 (30/30 checks) on `gemini-3.5-flash-lite`. The model made 7 invalid tool calls during the eval,
 all of them `add_task` without a title. Validation rejected every one and the model corrected it,
 so no invalid task reached a plan. Efficiency improved after a prompt change: the two-pet scenario
@@ -565,7 +566,7 @@ went from 11 model calls to 5. The weak spot is the checks themselves: one run g
 
 | Method | Where | Result |
 |---|---|---|
-| Automated tests (offline, fake model clients) | [tests/](tests/) | 83/83 pass |
+| Automated tests (offline, fake model clients) | [tests/](tests/) | 84/84 pass |
 | Real-model scenario eval with deterministic checks | [evals/run_evals.py](evals/run_evals.py), results in [evals/latest_results.json](evals/latest_results.json) | 6/6 scenarios, 30/30 checks |
 | Input validation on every tool call | `PlanningTools` in [pawpal_agent.py](pawpal_agent.py) | 7 invalid calls rejected and corrected in the eval run |
 | Self-check after every plan | `check_plan()` | Sends conflicts and unscheduled high-priority tasks back to the model (tested). No fix rounds were needed in the eval run |
@@ -574,7 +575,7 @@ went from 11 model calls to 5. The weak spot is the checks themselves: one run g
 
 ### Offline tests
 
-83 automated tests pass without an API key:
+84 automated tests pass without an API key:
 
 | Test file | Tests | What it covers |
 |---|---|---|
@@ -583,7 +584,7 @@ went from 11 model calls to 5. The weak spot is the checks themselves: one run g
 | `tests/test_llm.py` | 18 | Provider selection from `.env`, the Gemini format conversion both ways, rejected keys, rate-limit retries and daily-quota errors, and a full agent run on a fake Gemini endpoint |
 | `tests/test_rag.py` | 13 | Chunking, ranking for typical owner wording, species filtering, determinism, retrieval before/after comparison |
 | `tests/test_app_ui.py` | 4 | The real Streamlit app run headlessly: AI disabled without a key, review then Accept, Discard, API error shown instead of a crash |
-| `tests/test_evals.py` | 5 | The eval harness, sample capture and end-to-end demo trace score good and bad runs correctly |
+| `tests/test_evals.py` | 6 | The eval harness, sample capture and end-to-end demo trace score good and bad runs correctly, and single-run reports show consistency as not measured |
 
 ### Real-model evaluation
 

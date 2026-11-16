@@ -172,15 +172,22 @@ def print_report(report: dict[str, Any]) -> None:
           f"{report['runs_per_scenario']} run(s) per scenario\n")
     print(f"{'scenario':<28} {'pass rate':>9}  {'consistent':>10}  failed checks")
     print("-" * 90)
+    single_run = False
     for s in report["scenarios"]:
         failed = sorted({f"{c['name']} ({c['detail']})" for r in s["runs"] for c in r["checks"] if not c["passed"]})
-        print(f"{s['name']:<28} {s['pass_rate']:>8.0%}  {'yes' if s['consistent'] else 'no':>10}  "
-              f"{'; '.join(failed) or '-'}")
+        if len(s["runs"]) < 2:  # one run cannot show whether results repeat
+            consistent, single_run = "n/a", True
+        else:
+            consistent = "yes" if s["consistent"] else "no"
+        print(f"{s['name']:<28} {s['pass_rate']:>8.0%}  {consistent:>10}  {'; '.join(failed) or '-'}")
     t = report["totals"]
     print("-" * 90)
     print(f"Runs passed: {t['passed']}/{t['runs']} | checks passed: {t['checks_passed']}/{t['checks_total']} | "
           f"tool errors handled: {t['tool_errors']} | self-check fix rounds: {t['self_check_rounds']} | "
-          f"tokens: {t['input_tokens']:,} in / {t['output_tokens']:,} out\n")
+          f"tokens: {t['input_tokens']:,} in / {t['output_tokens']:,} out")
+    if single_run:
+        print("Consistency is n/a with 1 run per scenario; use --runs 2 or more to measure it.")
+    print()
 
 
 def main(argv: list[str] | None = None) -> int:
