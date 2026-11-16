@@ -5,13 +5,13 @@ rootdir: C:\Users\wjkim\Documents\ai110-applied-ai-system-project-PAWPAL
 configfile: pytest.ini
 testpaths: tests
 plugins: anyio-4.16.0
-collected 82 items
+collected 83 items
 
 tests\test_agent.py ................                                     [ 19%]
 tests\test_app_ui.py ....                                                [ 24%]
 tests\test_evals.py .....                                                [ 30%]
-tests\test_llm.py ..................                                     [ 52%]
-tests\test_pawpal.py ...........................                         [ 85%]
-tests\test_rag.py ............                                           [100%]
+tests\test_llm.py ..................                                     [ 51%]
+tests\test_pawpal.py ...........................                         [ 84%]
+tests\test_rag.py .............                                          [100%]
 
-============================= 82 passed in 10.23s =============================
+============================= 83 passed in 9.95s ==============================

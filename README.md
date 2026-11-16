@@ -18,14 +18,13 @@ saved until a person approves it.
 |---|---|
 | **Agentic workflow** | The model plans the steps, acts through tools that call the scheduler, and is sent back to fix any problems the self-check finds |
 | **Retrieval-augmented generation** | Guidelines retrieved from a pet-care knowledge base decide task lengths, priorities and frequencies, and every task must cite real guideline ids |
-| **Reliability and testing** | Input and tool guardrails, step-by-step logging, 82 offline tests (with fake model clients) and a scenario eval harness for the real model |
+| **Reliability and testing** | Input and tool guardrails, step-by-step logging, 83 offline tests (with fake model clients) and a scenario eval harness for the real model |
 
 ## Portfolio
 
 **Code:** https://github.com/wjjkim0217-dotcom/ai110-applied-ai-system-project-PAWPAL
 
 **What this project says about me as an AI engineer.**
-<!-- Draft written from your answers: edit until it sounds like you. -->
 I build AI features on top of code I can trust, and I make the code prove that the AI did its job.
 Instead of letting a model write a schedule I couldn't verify, I gave it tools that go through
 my tested Module 2 scheduler, so every plan is checked before anyone sees it. I work within real
@@ -126,6 +125,12 @@ no credit card). An [Anthropic API key](https://console.anthropic.com/) for Clau
 
    ```bash
    python -m evals.run_evals --show-latest
+   ```
+
+   And compare retrieval before and after the synonym map and breed words (offline):
+
+   ```bash
+   python -m evals.retrieval_comparison
    ```
 
 7. Optional: run the system end to end against the real model. These make real API calls. They
@@ -271,6 +276,8 @@ Everything below is copied from real command runs. The full, unedited logs are i
 | Guardrail and error-handling behaviour | `python -m pytest -v -k "<guardrail tests>"` | [guardrail_tests.txt](docs/evidence/guardrail_tests.txt) | No |
 | Real-model evaluation results (6 scenarios) | `python -m evals.run_evals --show-latest` | [eval_results.txt](docs/evidence/eval_results.txt) | No (reads the saved run) |
 | The whole offline test suite | `python -m pytest` | [pytest.txt](docs/evidence/pytest.txt) | No |
+| Retrieval before/after (5 requests, plain keywords vs. current retriever) | `python -m evals.retrieval_comparison` | [retrieval_comparison.txt](docs/evidence/retrieval_comparison.txt) | No |
+| Saved agent reasoning traces (3 real runs, including the original vs. revised prompt) | copied from `logs/pawpal_agent.log` | [agent_traces.log](docs/evidence/agent_traces.log) | No |
 
 **How this covers the grading checklist:**
 
@@ -280,6 +287,10 @@ Everything below is copied from real command runs. The full, unedited logs are i
 | AI feature behaviour (RAG, agent) | **RAG:** the `retrieve` step and `search_care_guidelines` calls fetch guideline sections, and every created task cites their ids. **Agent:** the model calls `add_pet`, `add_task` and `build_plan`, sees the conflicts `build_plan` reports, and fixes them with `update_task` (case 2, steps 14-20) before the `check` step passes |
 | Reliability, guardrail or evaluation behaviour | Case 1 (empty request blocked with 0 model calls), case 4 (prompt injection could not delete tasks), 13/13 guardrail tests, 6/6 eval scenarios with 30/30 checks |
 | Clear outputs for each case | Every case ends with its output, proposed schedule and PASS/FAIL checks |
+| Stretch: RAG enhancement | Custom 4-file knowledge base with species filtering. Before/after: 6/8 → 8/8 needed sections and 4 → 0 wrong-species sections ([model_card.md](model_card.md#retrieval-before-vs-after)) |
+| Stretch: agentic workflow | Real agent traces saved in [ai_interactions.md](ai_interactions.md) and [agent_traces.log](docs/evidence/agent_traces.log) |
+| Stretch: specialization | Baseline vs. specialized system prompt: 11 → 5 model calls, 9 → 0 invalid tool calls, about 70% fewer tokens, and a measured drop in walk minutes ([model_card.md](model_card.md#baseline-vs-specialized-prompt)) |
+| Stretch: test harness | `python -m evals.run_evals` scores 6 predefined scenarios and prints a pass/fail summary |
 
 ### 1. End-to-end demo: `python -m evals.demo_run`
 
@@ -464,7 +475,7 @@ tests/test_llm.py::test_rate_limit_that_never_clears_becomes_a_readable_error PA
 tests/test_llm.py::test_daily_quota_fails_fast_with_the_reset_time PASSED [ 92%]
 tests/test_llm.py::test_rejected_gemini_key_gives_a_clear_message PASSED [100%]
 ...
-====================== 13 passed, 69 deselected in 8.69s ======================
+====================== 13 passed, 70 deselected in 8.18s ======================
 ```
 
 ### 3. Real-model evaluation results
@@ -493,16 +504,16 @@ From evals\latest_results.json (run started 2026-11-14T16:06:07)
 ```
 $ python -m pytest
 ...
-collected 82 items
+collected 83 items
 
 tests\test_agent.py ................                                     [ 19%]
 tests\test_app_ui.py ....                                                [ 24%]
 tests\test_evals.py .....                                                [ 30%]
-tests\test_llm.py ..................                                     [ 52%]
-tests\test_pawpal.py ...........................                         [ 85%]
-tests\test_rag.py ............                                           [100%]
+tests\test_llm.py ..................                                     [ 51%]
+tests\test_pawpal.py ...........................                         [ 84%]
+tests\test_rag.py .............                                          [100%]
 
-============================= 82 passed in 10.23s =============================
+============================= 83 passed in 9.95s ==============================
 ```
 
 ## Design decisions
@@ -543,7 +554,7 @@ tests\test_rag.py ............                                           [100%]
 
 ## Testing summary
 
-**In short:** 82 of 82 automated tests pass offline, and 6 of 6 real-model scenarios passed
+**In short:** 83 of 83 automated tests pass offline, and 6 of 6 real-model scenarios passed
 (30/30 checks) on `gemini-3.5-flash-lite`. The model made 7 invalid tool calls during the eval,
 all of them `add_task` without a title. Validation rejected every one and the model corrected it,
 so no invalid task reached a plan. Efficiency improved after a prompt change: the two-pet scenario
@@ -554,7 +565,7 @@ went from 11 model calls to 5. The weak spot is the checks themselves: one run g
 
 | Method | Where | Result |
 |---|---|---|
-| Automated tests (offline, fake model clients) | [tests/](tests/) | 82/82 pass |
+| Automated tests (offline, fake model clients) | [tests/](tests/) | 83/83 pass |
 | Real-model scenario eval with deterministic checks | [evals/run_evals.py](evals/run_evals.py), results in [evals/latest_results.json](evals/latest_results.json) | 6/6 scenarios, 30/30 checks |
 | Input validation on every tool call | `PlanningTools` in [pawpal_agent.py](pawpal_agent.py) | 7 invalid calls rejected and corrected in the eval run |
 | Self-check after every plan | `check_plan()` | Sends conflicts and unscheduled high-priority tasks back to the model (tested). No fix rounds were needed in the eval run |
@@ -563,14 +574,14 @@ went from 11 model calls to 5. The weak spot is the checks themselves: one run g
 
 ### Offline tests
 
-82 automated tests pass without an API key:
+83 automated tests pass without an API key:
 
 | Test file | Tests | What it covers |
 |---|---|---|
 | `tests/test_pawpal.py` | 27 | Original scheduler: sorting, recurrence, conflicts, edge cases, validation |
 | `tests/test_agent.py` | 16 | Agent loop with a scripted fake model: drafts never touch saved data, guidelines reach the prompt, self-check rounds and their limit, tool errors, call limits, API errors, refusals, logging |
 | `tests/test_llm.py` | 18 | Provider selection from `.env`, the Gemini format conversion both ways, rejected keys, rate-limit retries and daily-quota errors, and a full agent run on a fake Gemini endpoint |
-| `tests/test_rag.py` | 12 | Chunking, ranking for typical owner wording, species filtering, determinism |
+| `tests/test_rag.py` | 13 | Chunking, ranking for typical owner wording, species filtering, determinism, retrieval before/after comparison |
 | `tests/test_app_ui.py` | 4 | The real Streamlit app run headlessly: AI disabled without a key, review then Accept, Discard, API error shown instead of a crash |
 | `tests/test_evals.py` | 5 | The eval harness, sample capture and end-to-end demo trace score good and bad runs correctly |
 
@@ -629,7 +640,6 @@ are needed.
 
 ## Reflection
 
-<!-- Draft: rewrite this in your own words. -->
 This project taught me that the hard part of adding AI to an app is deciding what the AI should
 *not* do. Letting the model write a schedule directly would have been less code, but I could not
 have trusted or tested it. Splitting the work so the model handles language and judgment, while
@@ -650,13 +660,14 @@ pawpal_agent.py         AI agent: tools, guardrails, self-check, logging
 pawpal_llm.py           Model providers: Gemini adapter (free) and Claude
 pawpal_rag.py           Knowledge-base loader and BM25 retriever
 knowledge/              Pet-care guidelines (dogs, cats, medication, scheduling)
-evals/                  Scenario evals, end-to-end demo and sample capture (real model)
+evals/                  Scenario evals, end-to-end demo, sample capture (real model), retrieval comparison (offline)
 tests/                  Offline tests, including fake model clients
 diagrams/               architecture.mmd (system) and uml.mmd (scheduler classes)
 assets/                 Rendered architecture diagram
 docs/scheduler.md       Original Module 2 scheduler documentation
 docs/evidence/          Text logs from real command runs (demo, tests, evals)
-model_card.md           Limitations, misuse, testing surprises, AI collaboration
+model_card.md           Limitations, misuse, testing surprises, prompt and retrieval comparisons, AI collaboration
+ai_interactions.md      Saved agent traces and the original vs. revised prompt comparison
 ```
 
 The pet-care guidance in `knowledge/` is general information for planning, not veterinary advice.

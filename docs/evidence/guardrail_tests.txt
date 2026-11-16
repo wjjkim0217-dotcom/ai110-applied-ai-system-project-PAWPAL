@@ -1,11 +1,12 @@
 $ python -m pytest -v -k "empty_and_overlong or rejected_gemini_key or rate_limit or daily_quota or invalid_tool_input or cannot_remove or call_limit or refusal or api_failure or api_error_is_shown"
 ============================= test session starts =============================
 platform win32 -- Python 3.13.15, pytest-9.2.0, pluggy-1.7.0 -- C:\Users\wjkim\Documents\ai110-applied-ai-system-project-PAWPAL\.venv\Scripts\python.exe
+cachedir: .pytest_cache
 rootdir: C:\Users\wjkim\Documents\ai110-applied-ai-system-project-PAWPAL
 configfile: pytest.ini
 testpaths: tests
 plugins: anyio-4.16.0
-collecting ... collected 82 items / 69 deselected / 13 selected
+collecting ... collected 83 items / 70 deselected / 13 selected
 
 tests/test_agent.py::test_invalid_tool_input_is_returned_to_the_agent_as_an_error PASSED [  7%]
 tests/test_agent.py::test_agent_cannot_remove_tasks_the_owner_created PASSED [ 15%]
@@ -21,4 +22,4 @@ tests/test_llm.py::test_rate_limit_that_never_clears_becomes_a_readable_error PA
 tests/test_llm.py::test_daily_quota_fails_fast_with_the_reset_time PASSED [ 92%]
 tests/test_llm.py::test_rejected_gemini_key_gives_a_clear_message PASSED [100%]
 
-====================== 13 passed, 69 deselected in 8.69s ======================
+====================== 13 passed, 70 deselected in 8.18s ======================

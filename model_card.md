@@ -1,11 +1,5 @@
 # Model card: PawPal+ AI planning assistant
 
-<!--
-DRAFT. Every section is grounded in what actually happened in this project, but this is
-your graded reflection: read each part, change anything that does not match your view,
-and rewrite the "Collaboration with AI" section in your own words before submitting.
--->
-
 ## Overview
 
 | | |
@@ -16,7 +10,7 @@ and rewrite the "Collaboration with AI" section in your own words before submitt
 | **Knowledge base** | 19 short markdown sections in [knowledge/](knowledge/): 5 for dogs, 5 for cats, 9 general (medication, scheduling) |
 | **Intended users** | Pet owners planning routine daily care for dogs and cats |
 | **Not intended for** | Medical decisions, medication dosing, emergencies, or animals other than dogs and cats |
-| **Evaluation** | 81 offline tests; 6 real-model scenarios with 30 deterministic checks (all passed on 2026-11-14). Details in the README's Testing summary and in [evals/latest_results.json](evals/latest_results.json) |
+| **Evaluation** | 83 offline tests; 6 real-model scenarios with 30 deterministic checks (all passed on 2026-11-14). Details in the README's Testing summary and in [evals/latest_results.json](evals/latest_results.json) |
 
 ## Limitations and biases
 
@@ -90,6 +84,75 @@ the app itself, not only in the docs.
 - **The documentation needed checking too.** The first README eval table had the wrong number of
   checks per scenario (the total was right). Re-reading the raw JSON log caught it, which is a good
   argument for keeping results in a structured file.
+
+## Baseline vs. specialized prompt
+
+The agent's behaviour is specialized by a structured system prompt (`SYSTEM_PROMPT` in
+[pawpal_agent.py](pawpal_agent.py)). It sets the tool rules, requires a guideline citation on
+every task, never suggests doses, refers illness to a vet, and treats `<owner_request>` text as
+a request, not instructions. After the first real runs I added one paragraph that tells the
+model to work in as few turns as possible: batch the pets and tasks, fill in every required
+`add_task` field, fix all conflicts in one turn, and only search for more guidelines when the
+provided ones are not enough.
+
+Same request (husky Mochi and cat Luna, workday, pills at 08:00 and 20:00), same model
+(`gemini-3.5-flash-lite`), same knowledge base. The numbers come from `logs/pawpal_agent.log`.
+The full runs are committed in [docs/evidence/agent_traces.log](docs/evidence/agent_traces.log).
+
+| Measure | Baseline prompt (run `a404e9c9`) | Specialized prompt (runs `18a62293`, `f43430bd`, `2739db5a`) |
+|---|---|---|
+| Model calls (API requests) | 11 | 5, 5, 5 |
+| Tool calls | 32 | 14, 13, 15 |
+| Invalid tool calls (missing `title`) | 9 | 0, 0, 0 |
+| `build_plan` rounds to clear conflicts | 4 | 2, 2, 2 |
+| Input / output tokens | 60,233 / 2,090 | 17,634 / 1,033 · 17,096 / 902 · 18,346 / 1,137 |
+| Extra guideline searches | 2 (`husky exercise walk grooming`, `cat play enrichment grooming`) | 0, 0, 0 |
+| Mochi's walk tasks | 2 × 45 min (90 min a day) | 2 × 15, 2 × 10, 3 × 15 min (20-45 min a day), all "bathroom breaks" |
+| Final self-check / eval checks | 0 errors | 0 errors; both scored runs passed 10/10 |
+
+**What the specialization changed.** Requests and tokens per plan dropped by about 55% and 70%,
+and the invalid calls disappeared. That made the free tier usable. **What it cost:**
+the baseline model went looking for an exercise guideline itself. The specialized prompt told it
+not to search unless it had to, so it planned only from the 5 sections retrieved up front, and
+for this request those did not include `dogs.md#walks-and-exercise`. The dog's exercise fell
+from 90 to 20-45 minutes a day, and my "at least 2 walk tasks" check could not see the
+difference. I kept the specialized prompt for its efficiency and recorded the regression. The fix
+is a minimum-walk-minutes check for high-energy breeds and always retrieving the walks section
+for dogs. The side-by-side discussion is in [ai_interactions.md](ai_interactions.md).
+
+## Retrieval: before vs. after
+
+The retriever ([pawpal_rag.py](pawpal_rag.py)) searches a custom knowledge base of 19 sections in
+4 files and filters by species. Two additions on top of plain keyword search made the difference:
+a synonym map for owner wording ("medicine" → meds, "breakfast" → feeding, "office" → work) and
+breed and age words for species detection ("husky", "lab", "kitten" and so on). The script
+[evals/retrieval_comparison.py](evals/retrieval_comparison.py) measures this offline on five owner
+requests (full output in
+[docs/evidence/retrieval_comparison.txt](docs/evidence/retrieval_comparison.txt)):
+
+| Request | Before (plain keywords) | After (synonyms + breed words) |
+|---|---|---|
+| "I have a 2-year-old husky named Mochi. I work 9 to 5 and he needs his walks." | Needed sections 2/2, but 2 of 5 slots were **cat** sections (`cats.md#grooming`, `cats.md#senior-cats`) | 2/2, all dog or general sections |
+| "Rex needs his medicine with breakfast." | **Nothing retrieved** | 1/1, `medication.md#medication-with-food` first |
+| "My lab needs potty breaks while I'm at the office." | 1/2, missed `scheduling.md#fitting-the-owner-s-day` | 2/2 |
+| "We just adopted a 10-week-old kitten called Pip. What food does she need?" | 1/1, but 2 **dog** sections | 1/1, no dog sections |
+| "Luna is getting old. Plan her meals and a check-up reminder." | 2/2 | 2/2 |
+| **Total** | **6/8 needed sections, 4 wrong-species sections** | **8/8 needed sections, 0 wrong-species sections** |
+
+**How this shows up in the output.** The model can only cite what it is given, and `add_task`
+rejects ids that do not exist. Before the fix, the medicine request would have reached the model
+with "No matching guidelines found", leaving it to guess whether to give the pill with food. A
+husky request filled two of its five slots with cat advice. With retrieval working, the real runs
+show the guidelines shaping the plan: the kitten got 4 meals a day citing `cats.md#feeding`
+("three or four a day"), Luna's meals include fresh water from the same section, and the
+sick-cat request retrieved `medication.md#when-to-call-a-vet` first and ended in a vet referral
+with nothing scheduled.
+
+**Still weak:** "2-year-old" and "10-week-old" map "old" to *senior*, so `cats.md#senior-cats`
+takes a slot it does not deserve in both the kitten request and the real husky run. And for the
+full two-pet request, `dogs.md#walks-and-exercise` ranks only 8th, behind the meds, feeding and
+bathroom sections, so it misses the top 5 even without that slot. That is the gap the specialized
+prompt exposed (see above).
 
 ## Collaboration with AI
 

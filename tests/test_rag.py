@@ -65,3 +65,17 @@ def test_parse_file_reads_species_and_tags(tmp_path: Path):
 def test_missing_knowledge_folder_fails_loudly(tmp_path: Path):
     with pytest.raises(FileNotFoundError):
         KnowledgeBase.load(tmp_path)
+
+
+def test_current_retrieval_beats_plain_keyword_matching():
+    from evals.retrieval_comparison import compare
+
+    rows = compare()
+    totals = {s: [0, 0] for s in ("before", "after")}
+    for row in rows:
+        totals[row["setup"]][0] += len(row["needed_found"])
+        totals[row["setup"]][1] += len(row["wrong_species"])
+    assert totals["after"][0] == sum(len(r["needed"]) for r in rows if r["setup"] == "after")
+    assert totals["after"][1] == 0
+    assert totals["after"][0] > totals["before"][0]
+    assert totals["after"][1] < totals["before"][1]

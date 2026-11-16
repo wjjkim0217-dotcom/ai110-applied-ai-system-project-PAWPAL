@@ -1,0 +1,88 @@
+# PawPal+ agent traces, copied unedited from logs/pawpal_agent.log (git-ignored).
+# Each line is one step of a real run on Google Gemini (gemini-3.5-flash-lite), 2026-11-14.
+# Long tool arguments and results are cut at 160 characters by the logger itself.
+#
+# a404e9c9  husky + cat workday, ORIGINAL system prompt (11 model calls, 9 tool errors)
+# 18a62293  same request, REVISED system prompt that asks for batched calls (5 model calls, 0 tool errors)
+# 0cc8b0bf  sick cat: the agent refers the owner to a vet and schedules nothing
+
+# ---- run a404e9c9 ----
+2026-11-14 16:04:29,423 INFO [a404e9c9] run started: model=gemini-3.5-flash-lite day=2025-01-06 request='I have a 2-year-old husky named Mochi and an adult cat named Luna. I work 9 to 5 on weekdays. Mochi takes a pill at 08:00 and 20:00.'
+2026-11-14 16:04:29,423 INFO [a404e9c9] retrieve: 5 guideline(s) for species ['cat', 'dog']: medication.md#medication-timing, cats.md#feeding, cats.md#senior-cats, dogs.md#bathroom-breaks, dogs.md#feeding
+2026-11-14 16:04:36,737 INFO [a404e9c9] model: call 1: stop_reason=tool_use
+2026-11-14 16:04:36,737 INFO [a404e9c9] tool: search_care_guidelines({"species": "dog", "query": "husky exercise walk grooming"}) -> {"results": [{"id": "dogs.md#walks-and-exercise", "title": "Walks and exercise", "text": "Most adult dogs need at least two walks a day. Plan a longer walk (...
+2026-11-14 16:04:36,738 INFO [a404e9c9] tool: search_care_guidelines({"query": "cat play enrichment grooming", "species": "cat"}) -> {"results": [{"id": "cats.md#play-and-enrichment", "title": "Play and enrichment", "text": "Indoor cats benefit from one or two short interactive play sessio...
+2026-11-14 16:04:38,885 INFO [a404e9c9] model: call 2: stop_reason=tool_use
+2026-11-14 16:04:38,885 INFO [a404e9c9] tool: add_pet({"name": "Mochi", "species": "dog"}) -> {"ok": true, "pet": "Mochi"}
+2026-11-14 16:04:38,885 INFO [a404e9c9] tool: add_pet({"species": "cat", "name": "Luna"}) -> {"ok": true, "pet": "Luna"}
+2026-11-14 16:04:38,885 WARNING [a404e9c9] tool_error: add_task({"duration_minutes": 5, "pet_name": "Mochi", "notes": "Morning pill", "frequency": "daily", "priority": "high", "sources": ["medication.md#medication-timing"...) -> title must be 1-60 characters
+2026-11-14 16:04:38,886 WARNING [a404e9c9] tool_error: add_task({"category": "meds", "frequency": "daily", "notes": "Evening pill", "sources": ["medication.md#medication-timing"], "fixed_time": "20:00", "pet_name": "Mochi...) -> title must be 1-60 characters
+2026-11-14 16:04:38,886 WARNING [a404e9c9] tool_error: add_task({"sources": ["dogs.md#feeding"], "pet_name": "Mochi", "priority": "high", "frequency": "daily", "notes": "Morning feeding", "duration_minutes": 10, "fixed_ti...) -> title must be 1-60 characters
+2026-11-14 16:04:38,886 WARNING [a404e9c9] tool_error: add_task({"sources": ["dogs.md#feeding"], "fixed_time": "19:00", "category": "feeding", "frequency": "daily", "duration_minutes": 10, "pet_name": "Mochi", "priority":...) -> title must be 1-60 characters
+2026-11-14 16:04:38,886 WARNING [a404e9c9] tool_error: add_task({"frequency": "daily", "pet_name": "Mochi", "priority": "high", "notes": "Morning walk for high-energy husky", "sources": ["dogs.md#walks-and-exercise"], "ca...) -> title must be 1-60 characters
+2026-11-14 16:04:38,886 WARNING [a404e9c9] tool_error: add_task({"fixed_time": "18:00", "priority": "high", "notes": "Evening walk for high-energy husky", "pet_name": "Mochi", "duration_minutes": 45, "category": "walk", "...) -> title must be 1-60 characters
+2026-11-14 16:04:38,886 WARNING [a404e9c9] tool_error: add_task({"frequency": "daily", "sources": ["cats.md#feeding"], "notes": "Morning feeding", "priority": "high", "pet_name": "Luna", "duration_minutes": 10, "category"...) -> title must be 1-60 characters
+2026-11-14 16:04:38,886 WARNING [a404e9c9] tool_error: add_task({"fixed_time": "19:00", "frequency": "daily", "priority": "high", "pet_name": "Luna", "duration_minutes": 10, "category": "feeding", "sources": ["cats.md#fee...) -> title must be 1-60 characters
+2026-11-14 16:04:38,886 WARNING [a404e9c9] tool_error: add_task({"category": "enrichment", "sources": ["cats.md#play-and-enrichment"], "frequency": "daily", "notes": "Interactive play session", "pet_name": "Luna", "durati...) -> title must be 1-60 characters
+2026-11-14 16:04:40,602 INFO [a404e9c9] model: call 3: stop_reason=tool_use
+2026-11-14 16:04:40,603 INFO [a404e9c9] tool: add_task({"sources": ["medication.md#medication-timing"], "duration_minutes": 5, "frequency": "daily", "category": "meds", "title": "Morning Pill", "priority": "high"...) -> {"ok": true, "task_id": "80150de8-5263-461a-b504-3c64208768fd", "task": "Morning Pill, 5 min, high priority, meds, at 08:00, daily"}
+2026-11-14 16:04:40,603 INFO [a404e9c9] tool: add_task({"pet_name": "Mochi", "category": "meds", "priority": "high", "duration_minutes": 5, "frequency": "daily", "title": "Evening Pill", "notes": "Evening pill", ...) -> {"ok": true, "task_id": "ef267411-4598-4233-ba99-f0da869e20ce", "task": "Evening Pill, 5 min, high priority, meds, at 20:00, daily"}
+2026-11-14 16:04:40,603 INFO [a404e9c9] tool: add_task({"duration_minutes": 10, "priority": "high", "category": "feeding", "sources": ["dogs.md#feeding"], "pet_name": "Mochi", "notes": "Morning feeding", "fixed_t...) -> {"ok": true, "task_id": "29cefa36-e12e-4630-ac96-8ba0a1b2ada1", "task": "Breakfast, 10 min, high priority, feeding, at 07:30, daily"}
+2026-11-14 16:04:40,603 INFO [a404e9c9] tool: add_task({"frequency": "daily", "sources": ["dogs.md#feeding"], "duration_minutes": 10, "title": "Dinner", "pet_name": "Mochi", "fixed_time": "19:00", "notes": "Eveni...) -> {"ok": true, "task_id": "97a2c70c-7b88-425e-a4fb-ee0a89ec9ff6", "task": "Dinner, 10 min, high priority, feeding, at 19:00, daily"}
+2026-11-14 16:04:40,603 INFO [a404e9c9] tool: add_task({"title": "Morning Walk", "frequency": "daily", "sources": ["dogs.md#walks-and-exercise"], "notes": "Morning walk for high-energy husky", "category": "walk",...) -> {"ok": true, "task_id": "7deb85bb-f510-4dfe-9290-905dd78dc3a4", "task": "Morning Walk, 45 min, high priority, walk, at 07:00, daily"}
+2026-11-14 16:04:40,603 INFO [a404e9c9] tool: add_task({"fixed_time": "18:00", "pet_name": "Mochi", "title": "Evening Walk", "sources": ["dogs.md#walks-and-exercise"], "priority": "high", "category": "walk", "not...) -> {"ok": true, "task_id": "fbd33abb-d8b3-409e-bf56-2610f6a6e107", "task": "Evening Walk, 45 min, high priority, walk, at 18:00, daily"}
+2026-11-14 16:04:40,603 INFO [a404e9c9] tool: add_task({"category": "feeding", "priority": "high", "frequency": "daily", "pet_name": "Luna", "fixed_time": "07:30", "title": "Breakfast", "notes": "Morning feeding"...) -> {"ok": true, "task_id": "27e120e6-73f8-47e3-a2c3-b6c21994f6c2", "task": "Breakfast, 10 min, high priority, feeding, at 07:30, daily"}
+2026-11-14 16:04:40,603 INFO [a404e9c9] tool: add_task({"notes": "Evening feeding", "pet_name": "Luna", "duration_minutes": 10, "priority": "high", "category": "feeding", "title": "Dinner", "fixed_time": "19:00",...) -> {"ok": true, "task_id": "7d4ef3ff-682f-4589-bd36-797b6a58ff54", "task": "Dinner, 10 min, high priority, feeding, at 19:00, daily"}
+2026-11-14 16:04:40,603 INFO [a404e9c9] tool: add_task({"title": "Play Session", "category": "enrichment", "frequency": "daily", "priority": "medium", "sources": ["cats.md#play-and-enrichment"], "duration_minutes...) -> {"ok": true, "task_id": "572c6076-0fef-4159-ba08-950cfdd52a37", "task": "Play Session, 15 min, medium priority, enrichment, flexible, daily"}
+2026-11-14 16:04:41,325 INFO [a404e9c9] model: call 4: stop_reason=tool_use
+2026-11-14 16:04:41,326 INFO [a404e9c9] tool: build_plan({}) -> {"day": "Monday 2025-01-06", "scheduled": ["06:00-06:15 Luna: Play Session (medium priority, first gap that fits)", "07:00-07:45 Mochi: Morning Walk (fixed t...
+2026-11-14 16:04:43,578 INFO [a404e9c9] model: call 5: stop_reason=tool_use
+2026-11-14 16:04:43,579 INFO [a404e9c9] tool: update_task({"task_id": "29cefa36-e12e-4630-ac96-8ba0a1b2ada1", "fixed_time": "07:50"}) -> {"ok": true, "task": "Mochi: Breakfast, 10 min, high priority, feeding, at 07:50, daily"}
+2026-11-14 16:04:43,579 INFO [a404e9c9] tool: update_task({"task_id": "27e120e6-73f8-47e3-a2c3-b6c21994f6c2", "fixed_time": "07:50"}) -> {"ok": true, "task": "Luna: Breakfast, 10 min, high priority, feeding, at 07:50, daily"}
+2026-11-14 16:04:43,579 INFO [a404e9c9] tool: update_task({"task_id": "97a2c70c-7b88-425e-a4fb-ee0a89ec9ff6", "fixed_time": "19:15"}) -> {"ok": true, "task": "Mochi: Dinner, 10 min, high priority, feeding, at 19:15, daily"}
+2026-11-14 16:04:43,579 INFO [a404e9c9] tool: update_task({"task_id": "7d4ef3ff-682f-4589-bd36-797b6a58ff54", "fixed_time": "19:15"}) -> {"ok": true, "task": "Luna: Dinner, 10 min, high priority, feeding, at 19:15, daily"}
+2026-11-14 16:04:44,223 INFO [a404e9c9] model: call 6: stop_reason=tool_use
+2026-11-14 16:04:44,224 INFO [a404e9c9] tool: build_plan({}) -> {"day": "Monday 2025-01-06", "scheduled": ["06:00-06:15 Luna: Play Session (medium priority, first gap that fits)", "07:00-07:45 Mochi: Morning Walk (fixed t...
+2026-11-14 16:04:45,695 INFO [a404e9c9] model: call 7: stop_reason=tool_use
+2026-11-14 16:04:45,695 INFO [a404e9c9] tool: update_task({"task_id": "7d4ef3ff-682f-4589-bd36-797b6a58ff54", "fixed_time": "19:25"}) -> {"ok": true, "task": "Luna: Dinner, 10 min, high priority, feeding, at 19:25, daily"}
+2026-11-14 16:04:46,445 INFO [a404e9c9] model: call 8: stop_reason=tool_use
+2026-11-14 16:04:46,445 INFO [a404e9c9] tool: build_plan({}) -> {"day": "Monday 2025-01-06", "scheduled": ["06:00-06:15 Luna: Play Session (medium priority, first gap that fits)", "07:00-07:45 Mochi: Morning Walk (fixed t...
+2026-11-14 16:04:47,135 INFO [a404e9c9] model: call 9: stop_reason=tool_use
+2026-11-14 16:04:47,135 INFO [a404e9c9] tool: update_task({"fixed_time": "08:05", "task_id": "27e120e6-73f8-47e3-a2c3-b6c21994f6c2"}) -> {"ok": true, "task": "Luna: Breakfast, 10 min, high priority, feeding, at 08:05, daily"}
+2026-11-14 16:04:47,850 INFO [a404e9c9] model: call 10: stop_reason=tool_use
+2026-11-14 16:04:47,850 INFO [a404e9c9] tool: build_plan({}) -> {"day": "Monday 2025-01-06", "scheduled": ["06:00-06:15 Luna: Play Session (medium priority, first gap that fits)", "07:00-07:45 Mochi: Morning Walk (fixed t...
+2026-11-14 16:04:49,039 INFO [a404e9c9] model: call 11: stop_reason=end_turn
+2026-11-14 16:04:49,040 INFO [a404e9c9] check: round 0: 0 error(s)
+2026-11-14 16:04:49,040 INFO [a404e9c9] run finished: status=proposed changes=11 issues=0 model_calls=11 tool_calls=32 tokens=60233/2090
+
+# ---- run 18a62293 ----
+2026-11-14 16:05:31,809 INFO [18a62293] run started: model=gemini-3.5-flash-lite day=2025-01-06 request='I have a 2-year-old husky named Mochi and an adult cat named Luna. I work 9 to 5 on weekdays. Mochi takes a pill at 08:00 and 20:00.'
+2026-11-14 16:05:31,809 INFO [18a62293] retrieve: 5 guideline(s) for species ['cat', 'dog']: medication.md#medication-timing, cats.md#feeding, cats.md#senior-cats, dogs.md#bathroom-breaks, dogs.md#feeding
+2026-11-14 16:05:40,482 INFO [18a62293] model: call 1: stop_reason=tool_use
+2026-11-14 16:05:40,483 INFO [18a62293] tool: add_pet({"species": "dog", "name": "Mochi"}) -> {"ok": true, "pet": "Mochi"}
+2026-11-14 16:05:40,483 INFO [18a62293] tool: add_pet({"name": "Luna", "species": "cat"}) -> {"ok": true, "pet": "Luna"}
+2026-11-14 16:05:40,483 INFO [18a62293] tool: add_task({"category": "meds", "duration_minutes": 5, "sources": ["medication.md#medication-timing"], "fixed_time": "08:00", "title": "Morning Pill", "frequency": "dai...) -> {"ok": true, "task_id": "41b3e4d7-06d9-4b06-b45d-297037a2db65", "task": "Morning Pill, 5 min, high priority, meds, at 08:00, daily"}
+2026-11-14 16:05:40,483 INFO [18a62293] tool: add_task({"sources": ["medication.md#medication-timing"], "notes": "Evening pill prescribed by vet", "frequency": "daily", "title": "Evening Pill", "category": "meds"...) -> {"ok": true, "task_id": "98b3898b-a538-4c5a-8fb1-a07e87ce2889", "task": "Evening Pill, 5 min, high priority, meds, at 20:00, daily"}
+2026-11-14 16:05:40,483 INFO [18a62293] tool: add_task({"duration_minutes": 10, "notes": "Morning feeding for adult dog", "title": "Morning Feeding", "priority": "medium", "pet_name": "Mochi", "sources": ["dogs.m...) -> {"ok": true, "task_id": "71d646c3-f1f5-4609-8e59-bba8b308fe00", "task": "Morning Feeding, 10 min, medium priority, feeding, at 08:15, daily"}
+2026-11-14 16:05:40,483 INFO [18a62293] tool: add_task({"duration_minutes": 10, "category": "feeding", "frequency": "daily", "sources": ["dogs.md#feeding"], "priority": "medium", "pet_name": "Mochi", "title": "Ev...) -> {"ok": true, "task_id": "50327388-0440-4cd0-8725-6a5b77fde76b", "task": "Evening Feeding, 10 min, medium priority, feeding, at 18:00, daily"}
+2026-11-14 16:05:40,483 INFO [18a62293] tool: add_task({"sources": ["dogs.md#bathroom-breaks"], "pet_name": "Mochi", "priority": "medium", "fixed_time": "07:00", "duration_minutes": 15, "category": "walk", "title...) -> {"ok": true, "task_id": "6130c3e1-199d-4399-bbdf-ca06e45e491a", "task": "Morning Bathroom Break, 15 min, medium priority, walk, at 07:00, daily"}
+2026-11-14 16:05:40,483 INFO [18a62293] tool: add_task({"frequency": "daily", "priority": "medium", "pet_name": "Mochi", "fixed_time": "17:00", "category": "walk", "notes": "Afternoon bathroom break for adult dog...) -> {"ok": true, "task_id": "3fa43f64-9f0e-4b90-a914-9c79690703bd", "task": "Afternoon Bathroom Break, 15 min, medium priority, walk, at 17:00, daily"}
+2026-11-14 16:05:40,483 INFO [18a62293] tool: add_task({"sources": ["cats.md#feeding"], "category": "feeding", "notes": "Morning feeding and water refresh for adult cat", "title": "Morning Feeding", "fixed_time":...) -> {"ok": true, "task_id": "05833cd6-74a3-44c3-956e-a27bcbbd3c2a", "task": "Morning Feeding, 10 min, medium priority, feeding, at 08:00, daily"}
+2026-11-14 16:05:40,483 INFO [18a62293] tool: add_task({"frequency": "daily", "sources": ["cats.md#feeding"], "priority": "medium", "pet_name": "Luna", "title": "Evening Feeding", "notes": "Evening feeding for ad...) -> {"ok": true, "task_id": "e9c17155-c266-4c40-b531-35ac2247878a", "task": "Evening Feeding, 10 min, medium priority, feeding, at 18:00, daily"}
+2026-11-14 16:05:41,073 INFO [18a62293] model: call 2: stop_reason=tool_use
+2026-11-14 16:05:41,074 INFO [18a62293] tool: build_plan({}) -> {"day": "Monday 2025-01-06", "scheduled": ["07:00-07:15 Mochi: Morning Bathroom Break (fixed time 07:00)", "08:00-08:05 Mochi: Morning Pill (fixed time 08:00...
+2026-11-14 16:05:41,889 INFO [18a62293] model: call 3: stop_reason=tool_use
+2026-11-14 16:05:41,889 INFO [18a62293] tool: update_task({"fixed_time": "08:25", "task_id": "05833cd6-74a3-44c3-956e-a27bcbbd3c2a"}) -> {"ok": true, "task": "Luna: Morning Feeding, 10 min, medium priority, feeding, at 08:25, daily"}
+2026-11-14 16:05:41,890 INFO [18a62293] tool: update_task({"task_id": "e9c17155-c266-4c40-b531-35ac2247878a", "fixed_time": "18:10"}) -> {"ok": true, "task": "Luna: Evening Feeding, 10 min, medium priority, feeding, at 18:10, daily"}
+2026-11-14 16:05:42,779 INFO [18a62293] model: call 4: stop_reason=tool_use
+2026-11-14 16:05:42,780 INFO [18a62293] tool: build_plan({}) -> {"day": "Monday 2025-01-06", "scheduled": ["07:00-07:15 Mochi: Morning Bathroom Break (fixed time 07:00)", "08:00-08:05 Mochi: Morning Pill (fixed time 08:00...
+2026-11-14 16:05:43,912 INFO [18a62293] model: call 5: stop_reason=end_turn
+2026-11-14 16:05:43,913 INFO [18a62293] check: round 0: 0 error(s)
+2026-11-14 16:05:43,913 INFO [18a62293] run finished: status=proposed changes=10 issues=0 model_calls=5 tool_calls=14 tokens=17634/1033
+
+# ---- run 0cc8b0bf ----
+2026-11-14 16:05:47,116 INFO [0cc8b0bf] run started: model=gemini-3.5-flash-lite day=2025-01-06 request="My cat Nala has been vomiting since this morning and won't eat. Plan her care for today."
+2026-11-14 16:05:47,117 INFO [0cc8b0bf] retrieve: 5 guideline(s) for species ['cat']: medication.md#when-to-call-a-vet, cats.md#litter-box, scheduling.md#fitting-the-owner-s-day, scheduling.md#priorities, cats.md#senior-cats
+2026-11-14 16:05:47,972 INFO [0cc8b0bf] model: call 1: stop_reason=end_turn
+2026-11-14 16:05:47,972 INFO [0cc8b0bf] check: round 0: 0 error(s)
+2026-11-14 16:05:47,973 INFO [0cc8b0bf] run finished: status=no_changes changes=0 issues=1 model_calls=1 tool_calls=0 tokens=1971/59

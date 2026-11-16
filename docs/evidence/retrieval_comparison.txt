@@ -1,0 +1,29 @@
+Retrieval before/after comparison (offline, top 5 sections per request)
+
+Request: 'I have a 2-year-old husky named Mochi. I work 9 to 5 and he needs his walks.'
+  Needs: dogs.md#walks-and-exercise, scheduling.md#fitting-the-owner-s-day
+  before  needed 2/2, wrong species 2: scheduling.md#fitting-the-owner-s-day, dogs.md#walks-and-exercise, cats.md#grooming, dogs.md#bathroom-breaks, cats.md#senior-cats
+  after   needed 2/2, wrong species 0: dogs.md#walks-and-exercise, scheduling.md#fitting-the-owner-s-day, dogs.md#bathroom-breaks, dogs.md#enrichment-and-training, dogs.md#feeding
+
+Request: 'Rex needs his medicine with breakfast.'
+  Needs: medication.md#medication-with-food
+  before  needed 0/1, wrong species 0: none
+  after   needed 1/1, wrong species 0: medication.md#medication-with-food, medication.md#missed-doses, medication.md#medication-timing, scheduling.md#priorities, scheduling.md#fixed-times-versus-flexible-tasks
+
+Request: "My lab needs potty breaks while I'm at the office."
+  Needs: dogs.md#bathroom-breaks, scheduling.md#fitting-the-owner-s-day
+  before  needed 1/2, wrong species 0: dogs.md#bathroom-breaks, scheduling.md#priorities
+  after   needed 2/2, wrong species 0: dogs.md#bathroom-breaks, scheduling.md#priorities, scheduling.md#fitting-the-owner-s-day, dogs.md#enrichment-and-training
+
+Request: 'We just adopted a 10-week-old kitten called Pip. What food does she need?'
+  Needs: cats.md#feeding
+  before  needed 1/1, wrong species 2: cats.md#feeding, dogs.md#grooming, medication.md#medication-with-food, cats.md#grooming, dogs.md#feeding
+  after   needed 1/1, wrong species 0: cats.md#feeding, cats.md#senior-cats, cats.md#grooming, cats.md#play-and-enrichment, scheduling.md#several-pets-one-owner
+
+Request: 'Luna is getting old. Plan her meals and a check-up reminder.'
+  Needs: cats.md#senior-cats, cats.md#feeding
+  before  needed 2/2, wrong species 0: cats.md#senior-cats, medication.md#medication-with-food, medication.md#missed-doses, cats.md#feeding, cats.md#play-and-enrichment
+  after   needed 2/2, wrong species 0: cats.md#senior-cats, medication.md#medication-with-food, cats.md#feeding, medication.md#missed-doses, cats.md#play-and-enrichment
+
+before  needed sections retrieved: 6/8 | wrong-species sections retrieved: 4
+after   needed sections retrieved: 8/8 | wrong-species sections retrieved: 0
