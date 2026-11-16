@@ -17,7 +17,7 @@ flowchart TB
         kb[("Knowledge base<br/>knowledge/*.md")]
         retriever["Retriever · pawpal_rag.py<br/>BM25, filtered by species"]
         agent["Agent · pawpal_agent.py<br/>model plans steps, cites guideline ids<br/>Gemini (free) or Claude via pawpal_llm.py"]
-        tools["Validated tools on a draft copy<br/>add_pet · add_task · update_task · build_plan<br/>search_care_guidelines"]
+        tools["Validated tools on a draft copy<br/>add_pet · add_task · update_task · remove_task<br/>build_plan · find_free_slot · set_availability<br/>get_current_state · search_care_guidelines<br/>remove_task only on tasks added this request"]
         scheduler["Scheduler · pawpal_system.py<br/>build_plan"]
         check["Self-check · check_plan()<br/>conflicts? high priority not scheduled?"]
     end

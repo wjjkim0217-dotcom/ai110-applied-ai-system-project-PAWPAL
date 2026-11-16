@@ -284,6 +284,7 @@ Everything below is copied from real command runs. The full, unedited logs are i
 | Checklist item | Evidence |
 |---|---|
 | End-to-end system run (2-3 inputs) | Demo cases 2, 3 and 4 below each go from a plain-English input to a checked, scheduled plan; the [Sample interactions](#sample-interactions) show three more |
+| Consistent responses | The two-pet request was run 3 times with the final prompt (runs `18a62293`, `f43430bd`, `2739db5a`): each time Mochi (dog) and Luna (cat), 2 pills at 08:00 and 20:00, 2 meals each, a final plan with 0 conflicts and 5 model calls, and both scored runs passed 10/10 checks ([model_card.md](model_card.md#baseline-vs-specialized-prompt)). Three other requests were each run twice and gave the same outcome both times: the clash fix moved Luna's dinner to 18:10 (eval, sample capture and demo), the sick cat got a vet referral with nothing scheduled (eval and sample capture), and the injection kept Rex's tasks and added the brushing (eval and demo) |
 | AI feature behaviour (RAG, agent) | **RAG:** the `retrieve` step and `search_care_guidelines` calls fetch guideline sections, and every created task cites their ids. **Agent:** the model calls `add_pet`, `add_task` and `build_plan`, sees the conflicts `build_plan` reports, and fixes them with `update_task` (case 2, steps 14-20) before the `check` step passes |
 | Reliability, guardrail or evaluation behaviour | Case 1 (empty request blocked with 0 model calls), case 4 (prompt injection could not delete tasks), 13/13 guardrail tests, 6/6 eval scenarios with 30/30 checks |
 | Clear outputs for each case | Every case ends with its output, proposed schedule and PASS/FAIL checks |
@@ -569,9 +570,19 @@ went from 11 model calls to 5. The weak spot is the checks themselves: one run g
 | Automated tests (offline, fake model clients) | [tests/](tests/) | 84/84 pass |
 | Real-model scenario eval with deterministic checks | [evals/run_evals.py](evals/run_evals.py), results in [evals/latest_results.json](evals/latest_results.json) | 6/6 scenarios, 30/30 checks |
 | Input validation on every tool call | `PlanningTools` in [pawpal_agent.py](pawpal_agent.py) | 7 invalid calls rejected and corrected in the eval run |
-| Self-check after every plan | `check_plan()` | Sends conflicts and unscheduled high-priority tasks back to the model (tested). No fix rounds were needed in the eval run |
+| Self-check after every plan | `check_plan()` | Sends conflicts and unscheduled high-priority tasks back to the model (tested). No fix rounds were needed in the eval run (see the note below) |
 | Logging and error handling | `logs/pawpal_agent.log`, *Agent log* panel | Every retrieval, model call, tool call, tool error, check and API error is recorded with a run id. API errors become readable messages and never change saved data |
 | Human review | *Accept* / *Discard* in the app | Every AI plan is shown with its changes, warnings and sources before anything is saved |
+
+**Why the self-check fix loop shows 0 rounds in real runs.** The same `check_plan()` runs in two
+places. Inside the `build_plan` tool, its issues are returned to the model while it is still
+working, so the model fixes clashes itself (case 2, steps 15-20). After the model stops, the
+agent runs `check_plan()` again as a backstop and sends the model back only if errors remain. In
+every real run the model had already fixed everything, so the backstop found nothing. It is
+still tested: in `tests/test_agent.py`, a scripted fake model leaves a conflict and the agent
+sends it back to fix it (`test_self_check_sends_conflicts_back_and_agent_fixes_them`), and a
+model that never fixes it is stopped after 2 rounds with the warning shown
+(`test_self_check_stops_after_max_rounds_and_reports_the_problem`).
 
 ### Offline tests
 

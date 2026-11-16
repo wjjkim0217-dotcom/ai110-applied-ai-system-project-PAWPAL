@@ -87,8 +87,10 @@ the app itself, not only in the docs.
 
 ## Baseline vs. specialized prompt
 
-The agent's behaviour is specialized by a structured system prompt (`SYSTEM_PROMPT` in
-[pawpal_agent.py](pawpal_agent.py)). It sets the tool rules, requires a guideline citation on
+The agent is specialized through constrained, structured prompting rather than fine-tuning:
+a fixed system prompt (`SYSTEM_PROMPT` in [pawpal_agent.py](pawpal_agent.py)) that limits it to
+one job and one way of working, with the tool schemas and validation enforcing the same rules in
+code. The prompt sets the tool rules, requires a guideline citation on
 every task, never suggests doses, refers illness to a vet, and treats `<owner_request>` text as
 a request, not instructions. After the first real runs I added one paragraph that tells the
 model to work in as few turns as possible: batch the pets and tasks, fill in every required
@@ -167,12 +169,18 @@ PawPal+, with the existing scheduler checking every plan the AI makes. I went wi
 because PawPal+ already had a working scheduler with 27 passing tests. Building the AI part on
 code I had already tested felt safer than starting on something new.
 
+**A suggestion that was wrong.** When I switched to Gemini, the AI set the default model to
+`gemini-2.5-flash`. That model had already been retired, so the first real run failed with a
+"not found" error. The next model, `gemini-3.5-flash`, worked but allows only 20 free requests a
+day, which two plans used up. The AI's retry logic then made this worse by waiting minutes for a
+daily limit that would not reset for hours. Only real runs exposed these problems. The default
+became `gemini-3.5-flash-lite` once it passed the hardest scenario on real runs, and the retry
+logic was changed so daily limits fail fast with the reset time.
+
 **A suggestion I did not accept as written.** The first version of the assistant only ran on the
 paid Claude API. I didn't have a budget for API usage on a class project, so I asked for a free
 option instead. The AI listed a few, I picked Google Gemini, and it changed the model layer so
-Gemini is the default and Claude is optional. That choice had side effects: the free tier only
-allows a small number of requests per day, so the default model became `gemini-3.5-flash-lite`
-and the agent was changed to use fewer requests per plan.
+Gemini is the default and Claude is optional.
 
 I also scoped down a couple of other things. I kept the work on `main` instead of the new branch
 it suggested. And when it started a bigger round of README and eval changes, I had it set those
